@@ -1731,3 +1731,77 @@ body.theme-dark .thumb-icon--moon {
     font-size: 0.8rem;
     color: var(--text-secondary);
 }
+
+/* ===== 스타일 아코디언 ===== */
+.style-accordion {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    overflow: hidden;
+}
+
+.style-accordion[open] {
+    background: var(--bg-elevated);
+}
+
+.style-accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+    list-style: none;
+}
+
+.style-accordion-header::-webkit-details-marker {
+    display: none;
+}
+
+.style-accordion-header:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+body.theme-dark .style-accordion-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.accordion-icon {
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.style-accordion[open] .accordion-icon {
+    transform: rotate(0deg);
+}
+
+.style-accordion:not([open]) .accordion-icon {
+    transform: rotate(-90deg);
+}
+
+.accordion-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.style-accordion-content {
+    padding: 0.75rem 1rem 1rem 1rem;
+}
+
+/* 그라데이션 옵션 영역 */
+.gradient-options {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border-subtle);
+}
+
+/* 말풍선 테두리 옵션 영역 */
+.bubble-border-options {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border-subtle);
+}
