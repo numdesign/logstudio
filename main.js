@@ -241,7 +241,9 @@ function renderLogBlocks() {
         <div class="log-block ${block.collapsed ? 'collapsed' : ''}" data-block-id="${block.id}" draggable="true">
             <div class="log-block-header">
                 <button type="button" class="log-block-btn log-block-btn--drag" title="드래그하여 순서 변경">☰</button>
-                <button type="button" class="log-block-btn log-block-btn--collapse ${block.collapsed ? 'collapsed' : ''}" title="접기/펼치기">▼</button>
+                <button type="button" class="log-block-btn log-block-btn--collapse ${block.collapsed ? 'collapsed' : ''}" title="접기/펼치기">
+                    <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+                </button>
                 <input type="text" class="log-block-title" value="${escapeAttr(block.title)}" placeholder="블록 제목">
                 <div class="log-block-actions">
                     <button type="button" class="log-block-btn log-block-btn--delete" title="삭제">✕</button>
@@ -314,7 +316,7 @@ const settings = {
     promptName: "",
     subModel: "",
     // 스타일
-    bgColor: "#fafafa",
+    bgColor: "#ffffff",
     textColor: "#18181b",
     charColor: "#18181b",
     userColor: "#71717a",
@@ -325,10 +327,13 @@ const settings = {
     // 말풍선 색상
     aiBubbleColor: "#f4f4f5",
     userBubbleColor: "#dbeafe",
-    fontFamily: "Pretendard",
+    fontFamily: "Pretendard, sans-serif",
     fontSize: 16,
     containerWidth: 800,
-    borderRadius: 8,
+    containerPadding: 2,
+    borderRadius: 16,
+    bubbleRadius: 16,
+    bubblePadding: 1,
     lineHeight: 1.8,
     letterSpacing: 0,
     // 테두리 & 그림자
@@ -348,63 +353,77 @@ const settings = {
 
 // 테마 프리셋 정의
 const themePresets = {
-    // 밝은 테마 5개
-    "light-clean": {
-        bgColor: "#fafafa", textColor: "#18181b", charColor: "#18181b",
-        boldColor: "#dc2626", italicColor: "#6366f1", dialogueColor: "#059669", dialogueBgColor: "#ecfdf5",
-        badgeModelColor: "#18181b", badgePromptColor: "#71717a", badgeSubColor: "#a1a1aa",
-        borderColor: "#e4e4e7",
-        aiBubbleColor: "#f4f4f5", userBubbleColor: "#dbeafe"
+    // Light Themes
+    "light-pure": {
+        bgColor: "#ffffff", textColor: "#171717", charColor: "#171717",
+        boldColor: "#ef4444", italicColor: "#6366f1", dialogueColor: "#059669", dialogueBgColor: "#f0fdf4",
+        badgeModelColor: "#171717", badgePromptColor: "#737373", badgeSubColor: "#a3a3a3",
+        borderColor: "#e5e5e5",
+        aiBubbleColor: "#f5f5f5", userBubbleColor: "#e0f2fe"
     },
-    "light-rose": {
-        bgColor: "#fff1f2", textColor: "#1f1f1f", charColor: "#e11d48",
-        boldColor: "#be123c", italicColor: "#f43f5e", dialogueColor: "#9f1239", dialogueBgColor: "#ffe4e6",
-        badgeModelColor: "#e11d48", badgePromptColor: "#fb7185", badgeSubColor: "#fda4af",
+    "light-peach": {
+        bgColor: "#fff5f5", textColor: "#4c0519", charColor: "#be123c",
+        boldColor: "#e11d48", italicColor: "#fb7185", dialogueColor: "#9f1239", dialogueBgColor: "#ffe4e6",
+        badgeModelColor: "#be123c", badgePromptColor: "#fb7185", badgeSubColor: "#fda4af",
         borderColor: "#fecdd3",
         aiBubbleColor: "#ffe4e6", userBubbleColor: "#fecdd3"
     },
-    "light-sage": {
-        bgColor: "#f0fdf4", textColor: "#14532d", charColor: "#166534",
-        boldColor: "#15803d", italicColor: "#22c55e", dialogueColor: "#166534", dialogueBgColor: "#dcfce7",
-        badgeModelColor: "#166534", badgePromptColor: "#4ade80", badgeSubColor: "#86efac",
-        borderColor: "#bbf7d0",
-        aiBubbleColor: "#dcfce7", userBubbleColor: "#bbf7d0"
+    "light-mint": {
+        bgColor: "#f0fdfa", textColor: "#134e4a", charColor: "#0d9488",
+        boldColor: "#0f766e", italicColor: "#2dd4bf", dialogueColor: "#115e59", dialogueBgColor: "#ccfbf1",
+        badgeModelColor: "#0d9488", badgePromptColor: "#5eead4", badgeSubColor: "#99f6e4",
+        borderColor: "#99f6e4",
+        aiBubbleColor: "#ccfbf1", userBubbleColor: "#99f6e4"
     },
-    "light-lavender": {
-        bgColor: "#faf5ff", textColor: "#2e1065", charColor: "#7c3aed",
+    "light-sky": {
+        bgColor: "#f0f9ff", textColor: "#0c4a6e", charColor: "#0284c7",
+        boldColor: "#0369a1", italicColor: "#38bdf8", dialogueColor: "#075985", dialogueBgColor: "#e0f2fe",
+        badgeModelColor: "#0284c7", badgePromptColor: "#38bdf8", badgeSubColor: "#7dd3fc",
+        borderColor: "#bae6fd",
+        aiBubbleColor: "#e0f2fe", userBubbleColor: "#bae6fd"
+    },
+    "light-lilac": {
+        bgColor: "#faf5ff", textColor: "#4c1d95", charColor: "#7c3aed",
         boldColor: "#6d28d9", italicColor: "#a78bfa", dialogueColor: "#5b21b6", dialogueBgColor: "#ede9fe",
         badgeModelColor: "#7c3aed", badgePromptColor: "#a78bfa", badgeSubColor: "#c4b5fd",
         borderColor: "#ddd6fe",
         aiBubbleColor: "#ede9fe", userBubbleColor: "#ddd6fe"
     },
-    "light-ocean": {
-        bgColor: "#f0f9ff", textColor: "#0c4a6e", charColor: "#0369a1",
-        boldColor: "#0284c7", italicColor: "#38bdf8", dialogueColor: "#075985", dialogueBgColor: "#e0f2fe",
-        badgeModelColor: "#0369a1", badgePromptColor: "#38bdf8", badgeSubColor: "#7dd3fc",
-        borderColor: "#bae6fd",
-        aiBubbleColor: "#e0f2fe", userBubbleColor: "#bae6fd"
+    // Dark Themes
+    "dark-space": {
+        bgColor: "#0f172a", textColor: "#f8fafc", charColor: "#94a3b8",
+        boldColor: "#38bdf8", italicColor: "#818cf8", dialogueColor: "#22d3ee", dialogueBgColor: "#1e293b",
+        badgeModelColor: "#334155", badgePromptColor: "#475569", badgeSubColor: "#64748b",
+        borderColor: "#1e293b",
+        aiBubbleColor: "#1e293b", userBubbleColor: "#334155"
     },
-    // 어두운 테마 3개
-    "dark-midnight": {
-        bgColor: "#0f0f23", textColor: "#e2e8f0", charColor: "#818cf8",
-        boldColor: "#fbbf24", italicColor: "#a5b4fc", dialogueColor: "#67e8f9", dialogueBgColor: "#1e1b4b",
-        badgeModelColor: "#6366f1", badgePromptColor: "#818cf8", badgeSubColor: "#a5b4fc",
-        borderColor: "#312e81",
-        aiBubbleColor: "#1e1b4b", userBubbleColor: "#312e81"
-    },
-    "dark-ember": {
-        bgColor: "#18181b", textColor: "#fafafa", charColor: "#f97316",
-        boldColor: "#fbbf24", italicColor: "#fdba74", dialogueColor: "#fb923c", dialogueBgColor: "#431407",
-        badgeModelColor: "#ea580c", badgePromptColor: "#f97316", badgeSubColor: "#fdba74",
-        borderColor: "#3f3f46",
-        aiBubbleColor: "#27272a", userBubbleColor: "#431407"
-    },
-    "dark-noir": {
-        bgColor: "#09090b", textColor: "#f4f4f5", charColor: "#22d3ee",
-        boldColor: "#f472b6", italicColor: "#67e8f9", dialogueColor: "#2dd4bf", dialogueBgColor: "#134e4a",
-        badgeModelColor: "#06b6d4", badgePromptColor: "#22d3ee", badgeSubColor: "#67e8f9",
+    "dark-charcoal": {
+        bgColor: "#18181b", textColor: "#fafafa", charColor: "#fbbf24",
+        boldColor: "#f59e0b", italicColor: "#fbbf24", dialogueColor: "#fb923c", dialogueBgColor: "#27272a",
+        badgeModelColor: "#d97706", badgePromptColor: "#f59e0b", badgeSubColor: "#fbbf24",
         borderColor: "#27272a",
-        aiBubbleColor: "#18181b", userBubbleColor: "#134e4a"
+        aiBubbleColor: "#27272a", userBubbleColor: "#3f3f46"
+    },
+    "dark-forest": {
+        bgColor: "#052e16", textColor: "#f0fdf4", charColor: "#4ade80",
+        boldColor: "#22c55e", italicColor: "#86efac", dialogueColor: "#4ade80", dialogueBgColor: "#14532d",
+        badgeModelColor: "#15803d", badgePromptColor: "#22c55e", badgeSubColor: "#4ade80",
+        borderColor: "#14532d",
+        aiBubbleColor: "#14532d", userBubbleColor: "#166534"
+    },
+    "dark-navy": {
+        bgColor: "#172554", textColor: "#eff6ff", charColor: "#60a5fa",
+        boldColor: "#3b82f6", italicColor: "#93c5fd", dialogueColor: "#60a5fa", dialogueBgColor: "#1e3a8a",
+        badgeModelColor: "#2563eb", badgePromptColor: "#3b82f6", badgeSubColor: "#60a5fa",
+        borderColor: "#1e3a8a",
+        aiBubbleColor: "#1e3a8a", userBubbleColor: "#1e40af"
+    },
+    "dark-cyber": {
+        bgColor: "#09090b", textColor: "#fdf4ff", charColor: "#d946ef",
+        boldColor: "#e879f9", italicColor: "#f0abfc", dialogueColor: "#c026d3", dialogueBgColor: "#2a0a2e",
+        badgeModelColor: "#a21caf", badgePromptColor: "#c026d3", badgeSubColor: "#e879f9",
+        borderColor: "#27272a",
+        aiBubbleColor: "#18181b", userBubbleColor: "#2a0a2e"
     }
 };
 
@@ -574,11 +593,13 @@ function parseMarkdownForBubble(text) {
 // 말풍선 HTML 생성
 function generateBubbleHTML(parsed, isForCode = false) {
     const indent = isForCode ? '    ' : '';
+    const bubblePadding = `${settings.bubblePadding}em ${settings.bubblePadding * 1.25}em`;
+    const bubbleRadius = `${settings.bubbleRadius}px`;
 
     if (parsed.type === 'ai') {
         const textColor = getContrastTextColor(settings.aiBubbleColor);
         const content = parseMarkdownForBubble(parsed.content);
-        const bubbleStyle = `display: block; margin: 0 0 1em 0; padding: 1em 1.25em; background: ${settings.aiBubbleColor}; color: ${textColor}; border-radius: 1em 1em 1em 0.25em; max-width: 85%; text-align: left; word-break: keep-all;`;
+        const bubbleStyle = `display: block; margin: 0 0 1em 0; padding: ${bubblePadding}; background: ${settings.aiBubbleColor}; color: ${textColor}; border-radius: ${bubbleRadius} ${bubbleRadius} ${bubbleRadius} 0.25em; max-width: 85%; text-align: left; word-break: keep-all;`;
         const nametagStyle = `display: block; margin-bottom: 0.375em; font-size: 0.75em; font-weight: 600; opacity: 0.7;`;
         const charName = settings.charName || 'AI';
 
@@ -591,7 +612,7 @@ function generateBubbleHTML(parsed, isForCode = false) {
         const textColor = getContrastTextColor(settings.userBubbleColor);
         const content = parseMarkdownForBubble(parsed.content);
         const wrapperStyle = `display: flex; justify-content: flex-end; margin: 0 0 1em 0;`;
-        const bubbleStyle = `display: block; padding: 1em 1.25em; background: ${settings.userBubbleColor}; color: ${textColor}; border-radius: 1em 1em 0.25em 1em; max-width: 85%; text-align: left; word-break: keep-all;`;
+        const bubbleStyle = `display: block; padding: ${bubblePadding}; background: ${settings.userBubbleColor}; color: ${textColor}; border-radius: ${bubbleRadius} ${bubbleRadius} 0.25em ${bubbleRadius}; max-width: 85%; text-align: left; word-break: keep-all;`;
         const nametagStyle = `display: block; margin-bottom: 0.375em; font-size: 0.75em; font-weight: 600; opacity: 0.7; text-align: right;`;
         const userName = settings.userName || 'User';
 
@@ -699,9 +720,10 @@ ${linesHTML}
     const containerStyleParts = [
         `max-width: ${settings.containerWidth}px`,
         `margin: 0 auto`,
-        `padding: 2em`,
+        `padding: ${settings.containerPadding}em`,
         `background: ${settings.bgColor}`,
         `color: ${settings.textColor}`,
+        `font-family: ${settings.fontFamily}`,
         `font-size: ${settings.fontSize}px`,
         `line-height: ${settings.lineHeight}`,
         `letter-spacing: ${settings.letterSpacing}em`,
@@ -746,9 +768,10 @@ function updatePreview() {
     // 미리보기 스타일 적용 (컨테이너)
     previewEl.style.maxWidth = `${settings.containerWidth}px`;
     previewEl.style.margin = "0 auto";
-    previewEl.style.padding = "2em";
+    previewEl.style.padding = `${settings.containerPadding}em`;
     previewEl.style.background = settings.bgColor;
     previewEl.style.color = settings.textColor;
+    previewEl.style.fontFamily = settings.fontFamily.split(',')[0].replace(/['"]/g, ''); // 간단한 미리보기용
     previewEl.style.fontSize = `${settings.fontSize}px`;
     previewEl.style.lineHeight = settings.lineHeight;
     previewEl.style.letterSpacing = `${settings.letterSpacing}em`;
@@ -970,7 +993,6 @@ function syncUIFromSettings() {
         "style-bg": "bgColor",
         "style-text": "textColor",
         "style-char": "charColor",
-        "style-user": "userColor",
         "style-bold": "boldColor",
         "style-italic": "italicColor",
         "style-dialogue": "dialogueColor",
@@ -980,6 +1002,7 @@ function syncUIFromSettings() {
         "style-badge-model": "badgeModelColor",
         "style-badge-prompt": "badgePromptColor",
         "style-badge-sub": "badgeSubColor",
+        "style-border-color": "borderColor",
     };
 
     Object.entries(colorMap).forEach(([id, key]) => {
@@ -995,7 +1018,6 @@ const colorInputs = [
     { colorId: "style-bg", textId: "style-bg-text", key: "bgColor" },
     { colorId: "style-text", textId: "style-text-text", key: "textColor" },
     { colorId: "style-char", textId: "style-char-text", key: "charColor" },
-    { colorId: "style-user", textId: "style-user-text", key: "userColor" },
     { colorId: "style-bold", textId: "style-bold-text", key: "boldColor" },
     { colorId: "style-italic", textId: "style-italic-text", key: "italicColor" },
     { colorId: "style-dialogue", textId: "style-dialogue-text", key: "dialogueColor" },
@@ -1036,7 +1058,10 @@ colorInputs.forEach(({ colorId, textId, key }) => {
 const rangeInputs = [
     { id: "style-font-size", key: "fontSize", valueId: "style-font-size-value", unit: "px" },
     { id: "style-width", key: "containerWidth", valueId: "style-width-value", unit: "px" },
+    { id: "style-padding", key: "containerPadding", valueId: "style-padding-value", unit: "em" },
     { id: "style-radius", key: "borderRadius", valueId: "style-radius-value", unit: "px" },
+    { id: "style-bubble-radius", key: "bubbleRadius", valueId: "style-bubble-radius-value", unit: "px" },
+    { id: "style-bubble-padding", key: "bubblePadding", valueId: "style-bubble-padding-value", unit: "em" },
     { id: "style-line-height", key: "lineHeight", valueId: "style-line-height-value", unit: "" },
     { id: "style-letter-spacing", key: "letterSpacing", valueId: "style-letter-spacing-value", unit: "em" },
     { id: "style-border-width", key: "borderWidth", valueId: "style-border-width-value", unit: "px" },
@@ -1056,6 +1081,34 @@ rangeInputs.forEach(({ id, key, valueId, unit }) => {
             saveToStorage();
         });
     }
+});
+
+// ===== 출력 탭 전환 =====
+const outputTabBtns = document.querySelectorAll(".output-tab");
+const outputContents = document.querySelectorAll(".output-content");
+const copyBtnEl = document.getElementById("copy-btn");
+const previewModeContainer = document.getElementById("preview-mode-container");
+
+outputTabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+        const tabId = btn.dataset.outputTab;
+
+        outputTabBtns.forEach((b) => b.classList.remove("active"));
+        outputContents.forEach((c) => c.classList.remove("active"));
+
+        btn.classList.add("active");
+        const content = document.querySelector(`#output-${tabId}`);
+        if (content) content.classList.add("active");
+
+        // 탭에 따라 버튼 표시/숨김
+        if (tabId === "code") {
+            if (copyBtnEl) copyBtnEl.style.display = "flex";
+            if (previewModeContainer) previewModeContainer.style.display = "none";
+        } else {
+            if (copyBtnEl) copyBtnEl.style.display = "none";
+            if (previewModeContainer) previewModeContainer.style.display = "flex";
+        }
+    });
 });
 
 // 박스 그림자 토글
@@ -1158,7 +1211,10 @@ function syncAllUIFromSettings() {
     const rangeMap = [
         { id: "style-font-size", key: "fontSize", valueId: "style-font-size-value", unit: "px" },
         { id: "style-width", key: "containerWidth", valueId: "style-width-value", unit: "px" },
+        { id: "style-padding", key: "containerPadding", valueId: "style-padding-value", unit: "em" },
         { id: "style-radius", key: "borderRadius", valueId: "style-radius-value", unit: "px" },
+        { id: "style-bubble-radius", key: "bubbleRadius", valueId: "style-bubble-radius-value", unit: "px" },
+        { id: "style-bubble-padding", key: "bubblePadding", valueId: "style-bubble-padding-value", unit: "em" },
         { id: "style-line-height", key: "lineHeight", valueId: "style-line-height-value", unit: "" },
         { id: "style-letter-spacing", key: "letterSpacing", valueId: "style-letter-spacing-value", unit: "em" },
         { id: "style-border-width", key: "borderWidth", valueId: "style-border-width-value", unit: "px" },

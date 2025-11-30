@@ -12,30 +12,41 @@ body {
     height: 100%;
 }
 
-/* ===== 라이트 테마 (기본) - Apple Style ===== */
+/* ===== 라이트 테마 (기본) - Modern Clean ===== */
 :root {
-    --bg: #ffffff;
-    --bg-elevated: #fbfbfd;
-    --bg-surface: #f5f5f7;
-    --border-subtle: rgba(0, 0, 0, 0.08);
-    --accent: #0071e3;
-    --accent-hover: #0077ed;
-    --text: #1d1d1f;
-    --text-muted: #86868b;
-    --text-secondary: #6e6e73;
+    --bg: #f8f9fa;
+    /* Slightly off-white for less harshness */
+    --bg-elevated: #ffffff;
+    --bg-surface: #f1f3f5;
+    --border-subtle: rgba(0, 0, 0, 0.06);
+    --accent: #3b82f6;
+    /* Modern Blue */
+    --accent-hover: #2563eb;
+    --text: #111827;
+    --text-muted: #6b7280;
+    --text-secondary: #4b5563;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius-lg: 1.25rem;
+    --radius-md: 0.75rem;
+    --radius-sm: 0.5rem;
 }
 
 /* ===== 다크 테마 ===== */
 body.theme-dark {
-    --bg: #000000;
-    --bg-elevated: #1d1d1f;
-    --bg-surface: #2d2d2d;
-    --border-subtle: rgba(255, 255, 255, 0.1);
-    --accent: #2997ff;
-    --accent-hover: #0077ed;
-    --text: #f5f5f7;
-    --text-muted: #86868b;
-    --text-secondary: #a1a1a6;
+    --bg: #111827;
+    --bg-elevated: #1f2937;
+    --bg-surface: #374151;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --accent: #60a5fa;
+    --accent-hover: #3b82f6;
+    --text: #f9fafb;
+    --text-muted: #9ca3af;
+    --text-secondary: #d1d5db;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
 /* ===== 전역 트랜지션 ===== */
@@ -72,10 +83,14 @@ body,
 
 .hero-title {
     margin: 0;
-    font-size: clamp(2rem, 5vw, 2.75rem);
-    font-weight: 700;
-    letter-spacing: -0.025em;
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
     color: var(--text);
+    background: linear-gradient(135deg, var(--text) 30%, var(--text-muted));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .hero-desc {
@@ -118,10 +133,16 @@ body,
     display: flex;
     flex-direction: column;
     background: var(--bg-elevated);
-    border-radius: 1rem;
-    border: 1px solid var(--border-subtle);
-    padding: 1.25rem;
+    border-radius: var(--radius-lg);
+    /* border: 1px solid var(--border-subtle); */
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
     min-height: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pane:hover {
+    box-shadow: var(--shadow-lg);
 }
 
 .pane--input {
@@ -211,6 +232,80 @@ body,
     max-height: 200px;
 }
 
+/* 출력 탭 스타일 */
+.pane--output {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.output-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    padding: 0.375rem;
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+}
+
+.output-tab {
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: calc(var(--radius-md) - 0.25rem);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.output-tab:hover {
+    color: var(--text);
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.output-tab.active {
+    background: var(--bg-elevated);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+body.theme-dark .output-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.output-tab-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.output-content {
+    display: none;
+    flex: 1;
+    min-height: 0;
+}
+
+.output-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.output-content .preview-canvas {
+    flex: 1;
+    min-height: 0;
+}
+
+.output-content .code-box {
+    flex: 1;
+    max-height: none;
+    min-height: 0;
+}
+
 .pane-header {
     display: flex;
     align-items: center;
@@ -263,17 +358,24 @@ body,
 .log-block {
     display: flex;
     flex-direction: column;
-    background: var(--bg-surface);
+    background: var(--bg-elevated);
     border: 1px solid var(--border-subtle);
-    border-radius: 0.875rem;
+    border-radius: var(--radius-md);
     overflow: hidden;
     flex-shrink: 0;
-    transition: opacity 0.2s ease;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.log-block:hover {
+    box-shadow: var(--shadow-md);
+    border-color: transparent;
 }
 
 .log-block.dragging {
     opacity: 0.5;
     transform: scale(0.98);
+    box-shadow: var(--shadow-lg);
 }
 
 .log-block.drag-over-top {
@@ -289,24 +391,36 @@ body,
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: var(--bg-elevated);
+    background: var(--bg-surface);
     border-bottom: 1px solid var(--border-subtle);
 }
 
 .log-block-title {
     flex: 1;
-    padding: 0.25rem 0.5rem;
-    border: none;
-    background: transparent;
+    padding: 0.375rem 0.625rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.375rem;
+    background: var(--bg-elevated);
     color: var(--text);
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.log-block-title:hover {
+    border-color: var(--text-muted);
 }
 
 .log-block-title:focus {
     outline: none;
-    background: var(--bg-surface);
-    border-radius: 0.25rem;
+    border-color: var(--accent);
+    background: var(--bg);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.log-block-title::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
 }
 
 .log-block-actions {
@@ -357,8 +471,18 @@ body,
     cursor: grabbing;
 }
 
+.log-block-btn--collapse {
+    transition: transform 0.2s ease;
+}
+
 .log-block-btn--collapse.collapsed {
     transform: rotate(-90deg);
+}
+
+.log-block-btn--collapse svg {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
 }
 
 .log-block-textarea {
@@ -418,30 +542,34 @@ body,
 .add-block-btn {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
     border: 1px dashed var(--border-subtle);
-    border-radius: 0.5rem;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 0.75rem;
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    width: auto;
 }
 
 .add-block-btn:hover {
     border-color: var(--accent);
     color: var(--accent);
-    background: rgba(0, 113, 227, 0.04);
+    background: rgba(59, 130, 246, 0.05);
+    transform: translateY(-1px);
 }
 
 .add-block-btn:active {
-    opacity: 0.7;
+    transform: translateY(0);
 }
 
 .add-block-btn span {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 1.1rem;
+    font-weight: 400;
+    line-height: 1;
 }
 
 /* 기존 #log-input 스타일 유지 (호환성) */
@@ -590,14 +718,14 @@ body.theme-dark .preview-canvas {
     opacity: 0.6;
 }
 
-/* ===== 설정 탭 ===== */
+/* ===== 설정 탭 (Segmented Control Style) ===== */
 .settings-tabs {
     display: flex;
-    gap: 0.125rem;
-    margin-bottom: 1.25rem;
-    padding: 0.1875rem;
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+    padding: 0.375rem;
     background: var(--bg-surface);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     position: relative;
 }
 
@@ -607,17 +735,18 @@ body.theme-dark .preview-canvas {
     border: none;
     background: transparent;
     color: var(--text-muted);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: calc(var(--radius-md) - 0.25rem);
     cursor: pointer;
-    transition: color 0.2s ease, background 0.2s ease;
+    transition: all 0.2s ease;
     position: relative;
     z-index: 1;
 }
 
 .settings-tab:hover {
     color: var(--text);
+    background: rgba(0, 0, 0, 0.03);
 }
 
 .settings-tab:active {
@@ -625,9 +754,13 @@ body.theme-dark .preview-canvas {
 }
 
 .settings-tab.active {
-    background: var(--bg);
-    color: var(--text);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    background: var(--bg-elevated);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+body.theme-dark .settings-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* ===== 설정 항목 ===== */
@@ -654,19 +787,25 @@ body.theme-dark .preview-canvas {
 
 .setting-input {
     width: 100%;
-    padding: 0.625rem 0.875rem;
-    border: 1px solid var(--border-subtle);
-    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
     background: var(--bg-surface);
     color: var(--text);
-    font-size: 0.875rem;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.setting-input:hover {
+    background: var(--bg);
+    border-color: var(--border-subtle);
 }
 
 .setting-input:focus {
     outline: none;
+    background: var(--bg-elevated);
     border-color: var(--accent);
-    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .setting-input::placeholder {
@@ -919,11 +1058,12 @@ body.theme-dark .preview-canvas {
 .range-input-wrap {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .setting-range {
     flex: 1;
+    min-width: 0;
     height: 4px;
     -webkit-appearance: none;
     appearance: none;
@@ -952,11 +1092,15 @@ body.theme-dark .preview-canvas {
 }
 
 .range-value {
+    width: 48px;
     min-width: 48px;
+    max-width: 48px;
     font-size: 0.7rem;
     font-family: "JetBrains Mono", monospace;
     color: var(--text-muted);
     text-align: right;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 /* 설정 구분선 */
