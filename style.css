@@ -1,0 +1,826 @@
+/* ===== 리셋 & 기본 설정 ===== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+/* ===== 다크 테마 (기본) ===== */
+:root {
+    --bg: #0f172a;
+    --bg-elevated: rgba(15, 23, 42, 0.85);
+    --bg-surface: #020617;
+    --border-subtle: rgba(148, 163, 184, 0.25);
+    --accent: #38bdf8;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+}
+
+/* ===== 라이트 테마 ===== */
+body.theme-light {
+    --bg: #f8fafc;
+    --bg-elevated: #ffffff;
+    --bg-surface: #f1f5f9;
+    --border-subtle: rgba(100, 116, 139, 0.2);
+    --accent: #2563eb;
+    --text: #0f172a;
+    --text-muted: #64748b;
+}
+
+/* ===== 전역 트랜지션 ===== */
+body,
+.app,
+.hero,
+.pane,
+#log-input,
+.preview-box {
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+/* ===== 앱 컨테이너 ===== */
+.app {
+    position: relative;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ===== 히어로 섹션 ===== */
+.hero {
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+}
+
+.hero-title {
+    margin: 0;
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-desc {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+/* ===== 메인 레이아웃 ===== */
+.app-layout {
+    flex: 1;
+    display: flex;
+    gap: 1rem;
+    padding: 0 1.5rem 1.5rem;
+    min-height: 0;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 0;
+}
+
+.column--left {
+    flex: 4;
+}
+
+.column--right {
+    flex: 5;
+}
+
+/* ===== 패널 ===== */
+.pane {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-elevated);
+    border-radius: 1rem;
+    border: 1px solid var(--border-subtle);
+    padding: 1rem;
+    min-height: 0;
+    backdrop-filter: blur(12px);
+}
+
+.pane--input {
+    flex: 1;
+    min-height: 200px;
+    overflow: hidden;
+}
+
+.pane--settings {
+    flex-shrink: 0;
+    max-height: 65vh;
+    overflow: visible;
+}
+
+.settings-content {
+    display: block;
+    max-height: calc(65vh - 4rem);
+    overflow-y: auto;
+    overflow-x: visible;
+    padding-right: 0.5rem;
+}
+
+.settings-content:not(.active) {
+    display: none;
+}
+
+.settings-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 3px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+.pane--preview {
+    flex: 1;
+}
+
+.pane--code {
+    flex-shrink: 0;
+    max-height: 200px;
+}
+
+.pane-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.pane-header .pane-label {
+    margin-bottom: 0;
+}
+
+.pane-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+/* ===== 입력 텍스트박스 ===== */
+.log-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.log-blocks::-webkit-scrollbar {
+    width: 6px;
+}
+
+.log-blocks::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.log-blocks::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 3px;
+}
+
+.log-blocks::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+.log-block {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.log-block-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.log-block-title {
+    flex: 1;
+    padding: 0.25rem 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.log-block-title:focus {
+    outline: none;
+    background: var(--bg-surface);
+    border-radius: 0.25rem;
+}
+
+.log-block-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.log-block-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.log-block-btn:hover {
+    background: var(--bg-surface);
+    color: var(--text);
+}
+
+.log-block-btn--delete:hover {
+    background: #ef44441a;
+    color: #ef4444;
+}
+
+.log-block-btn--collapse.collapsed {
+    transform: rotate(-90deg);
+}
+
+.log-block-textarea {
+    width: 100%;
+    min-height: 120px;
+    max-height: 300px;
+    resize: vertical;
+    border: none;
+    padding: 0.75rem;
+    background: var(--bg-surface);
+    color: var(--text);
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+.log-block-textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.log-block-textarea:focus {
+    outline: none;
+    background: var(--bg-elevated);
+}
+
+.log-block.collapsed .log-block-textarea {
+    display: none;
+}
+
+.log-block-options {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+}
+
+.log-block.collapsed .log-block-options {
+    display: none;
+}
+
+.log-block-option {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.log-block-option input[type="checkbox"] {
+    accent-color: var(--accent);
+}
+
+/* 블록 추가 버튼 */
+.add-block-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border: 1px dashed var(--border-subtle);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.add-block-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(56, 189, 248, 0.05);
+}
+
+.add-block-btn span {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* 기존 #log-input 스타일 유지 (호환성) */
+#log-input {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    resize: none;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-subtle);
+    padding: 1rem;
+    background: var(--bg-surface);
+    color: var(--text);
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+#log-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+#log-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+/* ===== 미리보기 캔버스 (체크무늬 배경) ===== */
+.preview-canvas {
+    flex: 1;
+    min-height: 0;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-subtle);
+    overflow: auto;
+    /* 포토샵 스타일 체크무늬 배경 */
+    background-color: #1a1a1a;
+    background-image:
+        linear-gradient(45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(-45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #2a2a2a 75%),
+        linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    padding: 1.5rem;
+}
+
+/* 라이트 테마 체크무늬 */
+body.theme-light .preview-canvas {
+    background-color: #ffffff;
+    background-image:
+        linear-gradient(45deg, #e0e0e0 25%, transparent 25%),
+        linear-gradient(-45deg, #e0e0e0 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e0e0e0 75%),
+        linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
+}
+
+/* 미리보기 내용 (실제 div) */
+.preview-content {
+    /* 기본 스타일 - JS에서 덮어씀 */
+    min-height: 100px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.preview-content p {
+    margin: 0 0 0.5em 0;
+}
+
+.preview-content .placeholder-text {
+    color: inherit;
+    opacity: 0.5;
+    text-align: center;
+    padding: 2rem;
+}
+
+.placeholder-text {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* ===== 설정 탭 ===== */
+.settings-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    padding: 0.25rem;
+    background: var(--bg-surface);
+    border-radius: 0.5rem;
+}
+
+.settings-tab {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-tab:hover {
+    color: var(--text);
+}
+
+.settings-tab.active {
+    background: var(--bg-elevated);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== 설정 항목 ===== */
+.setting-group {
+    margin-bottom: 0.75rem;
+}
+
+.setting-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.setting-row .setting-group {
+    flex: 1;
+}
+
+.setting-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0.375rem;
+}
+
+.setting-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    background: var(--bg-surface);
+    color: var(--text);
+    font-size: 0.8rem;
+    transition: border-color 0.2s ease;
+}
+
+.setting-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.setting-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* 드롭다운 입력 */
+.input-with-dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    margin-top: 0.25rem;
+    padding: 0.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dropdown-menu.open {
+    display: block;
+}
+
+.dropdown-menu button {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 0.8rem;
+    text-align: left;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.dropdown-menu button:hover {
+    background: var(--bg-elevated);
+}
+
+/* 테마 프리셋 */
+.theme-preset-wrap {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.theme-preset {
+    width: 36px;
+    height: 36px;
+    padding: 3px;
+    border: 2px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.theme-preset:hover {
+    border-color: var(--text-muted);
+}
+
+.theme-preset.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.preset-swatch {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0.25rem;
+}
+
+/* 색상 입력 */
+.color-input-wrap {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.setting-color {
+    width: 36px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    background: var(--bg-surface);
+    cursor: pointer;
+}
+
+.setting-color::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.setting-color::-webkit-color-swatch {
+    border: none;
+    border-radius: 0.375rem;
+}
+
+.setting-input--color {
+    flex: 1;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.75rem;
+}
+
+/* 셀렉트 */
+.setting-select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    background: var(--bg-surface);
+    color: var(--text);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.setting-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* 레인지 슬라이더 */
+.range-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.setting-range {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--bg-surface);
+    border-radius: 2px;
+    outline: none;
+}
+
+.setting-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.range-value {
+    min-width: 48px;
+    font-size: 0.7rem;
+    font-family: "JetBrains Mono", monospace;
+    color: var(--text-muted);
+    text-align: right;
+}
+
+/* ===== 코드 박스 ===== */
+.code-box {
+    flex: 1;
+    margin: 0;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    overflow: auto;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.code-box code {
+    color: var(--text);
+}
+
+/* 복사 버튼 */
+.copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.copy-btn.copied {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #fff;
+}
+
+.copy-icon {
+    font-size: 0.875rem;
+}
+
+/* ===== 테마 토글 ===== */
+.theme-toggle {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    z-index: 100;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.theme-toggle:focus {
+    outline: none;
+}
+
+.theme-toggle:focus-visible .toggle-track {
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.4);
+}
+
+/* 토글 트랙 */
+.toggle-track {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 52px;
+    height: 28px;
+    border-radius: 999px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 토글 썸(동그라미) */
+.toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 라이트 모드: 오른쪽으로 이동 */
+body.theme-light .toggle-thumb {
+    transform: translateX(24px);
+}
+
+/* 썸 안의 아이콘 */
+.thumb-icon {
+    position: absolute;
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+/* 다크 모드: 달 보임 */
+body:not(.theme-light) .thumb-icon--moon {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* 라이트 모드: 해 보임 */
+body.theme-light .thumb-icon--sun {
+    opacity: 1;
+    transform: scale(1);
+}
+
+@media (max-width: 900px) {
+    .app-layout {
+        flex-direction: column;
+    }
+
+    .column {
+        flex: none;
+    }
+
+    .setting-row {
+        flex-direction: column;
+        gap: 0;
+    }
+}

@@ -1,13 +1,323 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>챗챈 로그 제조기 V2
-    </title>
-    <link rel="icon" type="image/png" href="favicon.png" />
+  <meta charset="UTF-8" />
+  <title>챗챈 로그 제조기 V2</title>
+
+  <!-- Pretendard 웹폰트 -->
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="favicon.png" />
 </head>
+
 <body>
-    
+  <div class="app">
+    <!-- 테마 토글 (우상단 고정) -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="테마 전환">
+      <span class="toggle-track">
+        <span class="toggle-thumb">
+          <span class="thumb-icon thumb-icon--sun">☀️</span>
+          <span class="thumb-icon thumb-icon--moon">🌙</span>
+        </span>
+      </span>
+    </button>
+
+    <!-- 히어로 섹션: 제목 -->
+    <header class="hero">
+      <h1 class="hero-title">챗챈 로그 제조기 V2</h1>
+      <p class="hero-desc">텍스트 로그를 예쁜 HTML로 변환하세요</p>
+    </header>
+
+    <!-- 메인 영역 -->
+    <main class="app-layout">
+      <!-- 왼쪽: 설정 + 입력 -->
+      <div class="column column--left">
+        <!-- 설정 패널 -->
+        <section class="pane pane--settings">
+          <!-- 탭 네비게이션 -->
+          <div class="settings-tabs">
+            <button class="settings-tab active" data-tab="character">캐릭터</button>
+            <button class="settings-tab" data-tab="design">디자인</button>
+            <button class="settings-tab" data-tab="style">스타일</button>
+          </div>
+
+          <!-- 캐릭터 정보 탭 -->
+          <div class="settings-content active" id="tab-character">
+            <div class="setting-group">
+              <label class="setting-label">캐릭터 이름</label>
+              <input type="text" class="setting-input" id="char-name" placeholder="예: 아리아" autocomplete="off">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">캐릭터 링크 (선택)</label>
+              <input type="text" class="setting-input" id="char-link" placeholder="예: https://chub.ai/characters/..."
+                autocomplete="off">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">AI 모델명</label>
+              <div class="input-with-dropdown">
+                <input type="text" class="setting-input" id="ai-model" placeholder="직접 입력 또는 선택" autocomplete="off">
+                <div class="dropdown-menu" id="ai-model-dropdown">
+                  <button type="button" data-value="GPT 5.1">GPT 5.1</button>
+                  <button type="button" data-value="Claude 4.5 Opus">Claude 4.5 Opus</button>
+                  <button type="button" data-value="Claude 3.7 Sonnet">Claude 3.7 Sonnet</button>
+                  <button type="button" data-value="Claude 4.5 Sonnet">Claude 4.5 Sonnet</button>
+                  <button type="button" data-value="Gemini 3 Pro Preview">Gemini 3 Pro Preview</button>
+                  <button type="button" data-value="Gemini 2.5 Pro">Gemini 2.5 Pro</button>
+                </div>
+              </div>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">프롬프트명</label>
+              <input type="text" class="setting-input" id="prompt-name" placeholder="예: 판타지 롤플레이" autocomplete="off">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">보조 모델명</label>
+              <div class="input-with-dropdown">
+                <input type="text" class="setting-input" id="sub-model" placeholder="직접 입력 또는 선택" autocomplete="off">
+                <div class="dropdown-menu" id="sub-model-dropdown">
+                  <button type="button" data-value="GPT 5.1">GPT 5.1</button>
+                  <button type="button" data-value="GPT 4.1">GPT 4.1</button>
+                  <button type="button" data-value="Claude 4.5 Sonnet">Claude 4.5 Sonnet</button>
+                  <button type="button" data-value="Gemini 3 Pro Preview">Gemini 3 Pro Preview</button>
+                  <button type="button" data-value="Gemini 2.5 Pro">Gemini 2.5 Pro</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 디자인 탭 -->
+          <div class="settings-content" id="tab-design">
+            <!-- 테마 프리셋 -->
+            <div class="setting-group">
+              <label class="setting-label">테마 프리셋</label>
+              <div class="theme-preset-wrap">
+                <button type="button" class="theme-preset active" data-theme="dark-default" title="기본 다크">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #1e1e1e 50%, #38bdf8 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="dark-purple" title="퍼플 나이트">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #1a1625 50%, #a78bfa 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="dark-green" title="포레스트">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #0f1f1a 50%, #34d399 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="dark-warm" title="웜 다크">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #1c1917 50%, #fb923c 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="light-default" title="기본 라이트">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #ffffff 50%, #3b82f6 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="light-warm" title="크림">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #fefce8 50%, #ca8a04 50%);"></span>
+                </button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">배경색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-bg" value="#1e1e1e">
+                  <input type="text" class="setting-input setting-input--color" id="style-bg-text" value="#1e1e1e">
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">글자색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-text" value="#e0e0e0">
+                  <input type="text" class="setting-input setting-input--color" id="style-text-text" value="#e0e0e0">
+                </div>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">캐릭터 이름 색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-char" value="#38bdf8">
+                  <input type="text" class="setting-input setting-input--color" id="style-char-text" value="#38bdf8">
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">유저 이름 색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-user" value="#a78bfa">
+                  <input type="text" class="setting-input setting-input--color" id="style-user-text" value="#a78bfa">
+                </div>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">강조(**볼드**) 색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-bold" value="#fbbf24">
+                  <input type="text" class="setting-input setting-input--color" id="style-bold-text" value="#fbbf24">
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">이탤릭(*기울임*) 색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-italic" value="#a5b4fc">
+                  <input type="text" class="setting-input setting-input--color" id="style-italic-text" value="#a5b4fc">
+                </div>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">대사("") 색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-dialogue" value="#86efac">
+                  <input type="text" class="setting-input setting-input--color" id="style-dialogue-text"
+                    value="#86efac">
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">대사 배경색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-dialogue-bg" value="#1a2e1a">
+                  <input type="text" class="setting-input setting-input--color" id="style-dialogue-bg-text"
+                    value="#1a2e1a">
+                </div>
+              </div>
+            </div>
+            <!-- 뱃지 하이라이트 색상 -->
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">모델 뱃지 색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-badge-model" value="#10a37f">
+                  <input type="text" class="setting-input setting-input--color" id="style-badge-model-text"
+                    value="#10a37f">
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">프롬프트 뱃지 색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-badge-prompt" value="#6b7280">
+                  <input type="text" class="setting-input setting-input--color" id="style-badge-prompt-text"
+                    value="#6b7280">
+                </div>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">보조모델 뱃지 색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-badge-sub" value="#4285f4">
+                  <input type="text" class="setting-input setting-input--color" id="style-badge-sub-text"
+                    value="#4285f4">
+                </div>
+              </div>
+              <div class="setting-group"></div>
+            </div>
+          </div>
+
+          <!-- 스타일 탭 -->
+          <div class="settings-content" id="tab-style">
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">폰트</label>
+                <select class="setting-select" id="style-font">
+                  <option value="Pretendard">Pretendard</option>
+                  <option value="Noto Sans KR">Noto Sans KR</option>
+                  <option value="IBM Plex Sans KR">IBM Plex Sans KR</option>
+                  <option value="Nanum Gothic">나눔고딕</option>
+                  <option value="Nanum Myeongjo">나눔명조</option>
+                </select>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">폰트 크기</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-font-size" min="12" max="24" value="16">
+                  <span class="range-value" id="style-font-size-value">16px</span>
+                </div>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">컨테이너 너비</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-width" min="400" max="1200" step="50" value="800">
+                  <span class="range-value" id="style-width-value">800px</span>
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">모서리 둥글기</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-radius" min="0" max="24" value="8">
+                  <span class="range-value" id="style-radius-value">8px</span>
+                </div>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">줄 간격</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-line-height" min="1.2" max="2.4" step="0.1"
+                    value="1.8">
+                  <span class="range-value" id="style-line-height-value">1.8</span>
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">자간</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-letter-spacing" min="-0.05" max="0.15" step="0.01"
+                    value="0">
+                  <span class="range-value" id="style-letter-spacing-value">0em</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 입력 블록들 -->
+        <section class="pane pane--input">
+          <div class="pane-header">
+            <span class="pane-label">로그 블록</span>
+            <button id="add-block-btn" class="add-block-btn" type="button" title="블록 추가">
+              <span>+</span> 블록 추가
+            </button>
+          </div>
+          <div id="log-blocks" class="log-blocks">
+            <!-- 블록들이 여기에 동적으로 생성됨 -->
+          </div>
+        </section>
+      </div>
+
+      <!-- 오른쪽: 미리보기 + 코드 출력 -->
+      <div class="column column--right">
+        <!-- 미리보기 -->
+        <section class="pane pane--preview">
+          <span class="pane-label">미리보기</span>
+          <div class="preview-canvas">
+            <div id="log-preview" class="preview-content">
+              <p class="placeholder-text">변환된 결과가 여기에 표시됩니다</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- HTML 코드 출력 -->
+        <section class="pane pane--code">
+          <div class="pane-header">
+            <span class="pane-label">HTML 코드</span>
+            <button id="copy-btn" class="copy-btn" type="button">
+              <span class="copy-icon">📋</span>
+              <span class="copy-text">복사</span>
+            </button>
+          </div>
+          <pre id="code-output" class="code-box"><code class="placeholder-text">코드가 여기에 표시됩니다</code></pre>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="main.js"></script>
 </body>
+
 </html>
