@@ -258,8 +258,17 @@ async function handlePasteWithImages(e, blockId) {
 
 // HTML 내 이미지 처리 (외부 URL -> base64, 압축)
 async function processHtmlWithImages(html) {
+    console.log('[붙여넣기] HTML 원본:', html);
+    
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
+    
+    // 파싱된 HTML에서 img 태그 확인
+    const allImages = doc.querySelectorAll('img');
+    console.log('[붙여넣기] 감지된 img 태그 수:', allImages.length);
+    allImages.forEach((img, i) => {
+        console.log(`[붙여넣기] img[${i}] src:`, img.src, 'getAttribute:', img.getAttribute('src'));
+    });
 
     // ===== HTML Sanitize: 텍스트와 이미지만 추출 =====
     function sanitizeNode(node) {
@@ -353,14 +362,20 @@ async function processHtmlWithImages(html) {
                     console.warn('Blob fetch 실패:', err);
                 }
             } else if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) {
+                console.log(`[이미지 ${i}] https fetch 시도...`);
                 try {
                     const response = await fetch(imgSrc);
+                    console.log(`[이미지 ${i}] fetch 응답:`, response.status, response.ok);
                     const blob = await response.blob();
+                    console.log(`[이미지 ${i}] blob 생성 완료:`, blob.type, blob.size);
                     base64 = await blobToBase64(blob);
+                    console.log(`[이미지 ${i}] base64 변환 완료, 길이:`, base64?.length);
                 } catch (err) {
-                    console.warn('외부 이미지 fetch 실패:', err);
+                    console.warn(`[이미지 ${i}] 외부 이미지 fetch 실패:`, err);
                     // fetch 실패 시 Canvas 방식 시도
+                    console.log(`[이미지 ${i}] Canvas 방식 시도...`);
                     base64 = await tryLoadImageViaCanvas(imgSrc);
+                    console.log(`[이미지 ${i}] Canvas 결과:`, base64 ? '성공' : '실패');
                 }
             } else if (imgSrc.startsWith('//')) {
                 // 프로토콜 없는 URL (//cdn.example.com/...)
