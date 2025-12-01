@@ -21,6 +21,319 @@ function escapeHTML(str) {
         .replace(/>/g, "&gt;");
 }
 
+// ===== 이미지 처리 유틸리티 =====
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function compressImage(base64, maxWidth = 800, quality = 0.8) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            // 이미 작으면 그대로 반환
+            if (img.width <= maxWidth) {
+                resolve(base64);
+                return;
+            }
+            const canvas = document.createElement('canvas');
+            const ratio = maxWidth / img.width;
+            canvas.width = img.width * ratio;
+            canvas.height = img.height * ratio;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(base64); // 실패 시 원본 반환
+        img.src = base64;
+    });
+}
+
+// contenteditable에서 텍스트+이미지 콘텐츠 추출 (정규화)
+function getContentEditableContent(el) {
+    // 임시 DOM으로 파싱
+    const clone = el.cloneNode(true);
+
+    // img 태그를 플레이스홀더로 임시 대체
+    const imgPlaceholders = [];
+    clone.querySelectorAll('img').forEach((img, i) => {
+        const placeholder = `__IMG_PLACEHOLDER_${i}__`;
+        imgPlaceholders.push({ placeholder, src: img.src });
+        img.replaceWith(placeholder);
+    });
+
+    // br 태그를 줄바꿈으로
+    clone.querySelectorAll('br').forEach(br => {
+        br.replaceWith('\n');
+    });
+
+    // div, p 태그는 내용 뒤에 줄바꿈 추가
+    clone.querySelectorAll('div, p').forEach(block => {
+        // 블록 요소 앞뒤로 줄바꿈 추가
+        if (block.previousSibling && block.previousSibling.nodeType === Node.TEXT_NODE) {
+            const text = block.previousSibling.textContent;
+            if (text && !text.endsWith('\n')) {
+                block.before('\n');
+            }
+        }
+    });
+
+    // 텍스트 추출 (HTML 엔티티 자동 디코딩됨)
+    let text = clone.textContent || '';
+
+    // img 플레이스홀더를 실제 img 태그로 복원
+    imgPlaceholders.forEach(({ placeholder, src }) => {
+        text = text.replace(placeholder, `<img src="${src}">`);
+    });
+
+    // 연속 줄바꿈 정리 (3개 이상 -> 2개)
+    text = text.replace(/\n{3,}/g, '\n\n');
+
+    return text;
+}
+
+// contenteditable에 콘텐츠 설정 (텍스트 -> HTML 변환)
+function setContentEditableContent(el, content) {
+    // img 태그를 임시 플레이스홀더로
+    const imgPlaceholders = [];
+    let processed = content.replace(/<img\s+src="([^"]+)"[^>]*>/gi, (match, src) => {
+        const placeholder = `__IMG_SET_${imgPlaceholders.length}__`;
+        imgPlaceholders.push(src);
+        return placeholder;
+    });
+
+    // HTML 특수문자 escape (< > & 등)
+    processed = processed
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // 줄바꿈을 <br>로
+    processed = processed.replace(/\n/g, '<br>');
+
+    // img 플레이스홀더 복원
+    imgPlaceholders.forEach((src, i) => {
+        processed = processed.replace(`__IMG_SET_${i}__`, `<img src="${src}">`);
+    });
+
+    el.innerHTML = processed;
+}
+
+// 저장된 content를 contenteditable 표시용 HTML로 변환
+function formatContentForEditable(content) {
+    if (!content) return '';
+
+    // img 태그를 임시 플레이스홀더로
+    const imgPlaceholders = [];
+    let processed = content.replace(/<img\s+src="([^"]+)"[^>]*>/gi, (match, src) => {
+        const placeholder = `__IMG_FMT_${imgPlaceholders.length}__`;
+        imgPlaceholders.push(src);
+        return placeholder;
+    });
+
+    // HTML 특수문자 escape
+    processed = processed
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // 줄바꿈을 <br>로
+    processed = processed.replace(/\n/g, '<br>');
+
+    // img 플레이스홀더 복원
+    imgPlaceholders.forEach((src, i) => {
+        processed = processed.replace(`__IMG_FMT_${i}__`, `<img src="${src}">`);
+    });
+
+    return processed;
+}
+
+// HTML에서 순수 텍스트 추출 (parseLine용)
+function htmlToText(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+
+    // img 태그를 플레이스홀더로 변환
+    div.querySelectorAll('img').forEach((img, i) => {
+        const placeholder = document.createTextNode(`{{IMG:${img.src.substring(0, 50)}...}}`);
+        img.replaceWith(placeholder);
+    });
+
+    // br을 줄바꿈으로
+    div.querySelectorAll('br').forEach(br => {
+        br.replaceWith('\n');
+    });
+
+    // div, p 태그 뒤에 줄바꿈 추가
+    div.querySelectorAll('div, p').forEach(block => {
+        block.append('\n');
+    });
+
+    return div.textContent || '';
+}
+
+// Paste 이벤트 핸들러
+async function handlePasteWithImages(e, blockId) {
+    const clipboardData = e.clipboardData || window.clipboardData;
+    if (!clipboardData) return false;
+
+    const items = clipboardData.items;
+    const types = clipboardData.types;
+
+    // HTML이 있으면 우선 처리 (이미지 포함 가능)
+    if (types.includes('text/html')) {
+        e.preventDefault();
+        const html = clipboardData.getData('text/html');
+
+        // HTML 파싱하여 이미지 추출 및 압축
+        const processedHtml = await processHtmlWithImages(html);
+
+        // 현재 선택 위치에 삽입
+        document.execCommand('insertHTML', false, processedHtml);
+        return true;
+    }
+
+    // 이미지 파일 직접 붙여넣기
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            if (file) {
+                const base64 = await blobToBase64(file);
+                const compressed = await compressImage(base64);
+                const imgHtml = `<img src="${compressed}" style="max-width: 100%; border-radius: 8px; margin: 0.5em 0;">`;
+                document.execCommand('insertHTML', false, imgHtml);
+            }
+            return true;
+        }
+    }
+
+    // 일반 텍스트는 기본 동작
+    return false;
+}
+
+// HTML 내 이미지 처리 (외부 URL -> base64, 압축)
+async function processHtmlWithImages(html) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // ===== HTML Sanitize: 텍스트와 이미지만 추출 =====
+    function sanitizeNode(node) {
+        const result = [];
+
+        for (const child of node.childNodes) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                // 텍스트 노드 - 공백 유지 (trim 하지 않음)
+                const text = child.textContent;
+                if (text) {
+                    result.push(text);
+                }
+            } else if (child.nodeType === Node.ELEMENT_NODE) {
+                const tagName = child.tagName.toLowerCase();
+
+                if (tagName === 'img') {
+                    // 이미지는 src만 보존
+                    result.push({ type: 'img', src: child.src });
+                } else if (tagName === 'br') {
+                    // 줄바꿈
+                    result.push({ type: 'br' });
+                } else if (['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote'].includes(tagName)) {
+                    // 블록 요소: 재귀 처리 후 줄바꿈 추가
+                    const childContent = sanitizeNode(child);
+                    if (childContent.length > 0) {
+                        result.push(...childContent);
+                        result.push({ type: 'block-end' });
+                    }
+                } else {
+                    // 기타 인라인 요소 (span, mark, strong 등): 재귀적으로 처리
+                    const childContent = sanitizeNode(child);
+                    result.push(...childContent);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    const sanitized = sanitizeNode(doc.body);
+
+    // 결과 조립: 텍스트와 이미지 분리
+    let textParts = [];
+    const imagesToProcess = [];
+
+    for (const item of sanitized) {
+        if (typeof item === 'string') {
+            textParts.push(item);
+        } else if (item.type === 'img') {
+            imagesToProcess.push(item.src);
+            textParts.push(`__IMG_PLACEHOLDER_${imagesToProcess.length - 1}__`);
+        } else if (item.type === 'br') {
+            textParts.push('\n');
+        } else if (item.type === 'block-end') {
+            // 블록 요소 끝에는 빈 줄 추가 (문단 구분)
+            textParts.push('\n\n');
+        }
+    }
+
+    // 텍스트 합치기
+    let cleanHtml = textParts.join('');
+
+    // 연속 공백을 하나로 (줄바꿈 제외)
+    cleanHtml = cleanHtml.replace(/[^\S\n]+/g, ' ');
+
+    // 줄바꿈 앞뒤 공백 제거
+    cleanHtml = cleanHtml.replace(/ *\n */g, '\n');
+
+    // 연속된 줄바꿈 정리 (3개 이상 -> 2개)
+    cleanHtml = cleanHtml.replace(/\n{3,}/g, '\n\n').trim();
+
+    // 이미지 처리 및 placeholder 교체
+    for (let i = 0; i < imagesToProcess.length; i++) {
+        const imgSrc = imagesToProcess[i];
+        let base64 = null;
+
+        try {
+            if (imgSrc.startsWith('data:')) {
+                base64 = imgSrc;
+            } else if (imgSrc.startsWith('blob:')) {
+                try {
+                    const response = await fetch(imgSrc);
+                    const blob = await response.blob();
+                    base64 = await blobToBase64(blob);
+                } catch (err) {
+                    console.warn('Blob fetch 실패:', err);
+                }
+            } else if (imgSrc.startsWith('http')) {
+                try {
+                    const response = await fetch(imgSrc);
+                    const blob = await response.blob();
+                    base64 = await blobToBase64(blob);
+                } catch (err) {
+                    console.warn('외부 이미지 fetch 실패:', err);
+                }
+            }
+
+            if (base64) {
+                const compressed = await compressImage(base64);
+                const imgHtml = `<img src="${compressed}" style="max-width:100%;border-radius:8px;margin:0.5em 0;">`;
+                cleanHtml = cleanHtml.replace(`__IMG_PLACEHOLDER_${i}__`, '\n' + imgHtml + '\n');
+            } else {
+                cleanHtml = cleanHtml.replace(`__IMG_PLACEHOLDER_${i}__`, '');
+            }
+        } catch (err) {
+            console.warn('이미지 처리 실패:', err);
+            cleanHtml = cleanHtml.replace(`__IMG_PLACEHOLDER_${i}__`, '');
+        }
+    }
+
+    return cleanHtml.trim();
+}
+
 // ===== LocalStorage 저장/불러오기 =====
 function saveToStorage() {
     try {
@@ -126,9 +439,11 @@ let blockIdCounter = 0;
 
 function createLogBlock(title = "", content = "", collapsible = false, skipSave = false) {
     const id = blockIdCounter++;
+    // 현재 블록 개수 기준으로 제목 생성
+    const blockNumber = logBlocks.length + 1;
     const block = {
         id,
-        title: title || `블록 ${id + 1}`,
+        title: title || `블록 ${blockNumber}`,
         content,
         collapsible,
         collapsed: false
@@ -237,7 +552,10 @@ function setupBlockDragEvents(blockEl, blockId) {
 function renderLogBlocks() {
     if (!logBlocksContainer) return;
 
-    logBlocksContainer.innerHTML = logBlocks.map(block => `
+    logBlocksContainer.innerHTML = logBlocks.map(block => {
+        // content를 contenteditable에 맞게 HTML로 변환
+        const contentHtml = formatContentForEditable(block.content);
+        return `
         <div class="log-block ${block.collapsed ? 'collapsed' : ''}" data-block-id="${block.id}" draggable="true">
             <div class="log-block-header">
                 <button type="button" class="log-block-btn log-block-btn--drag" title="드래그하여 순서 변경">☰</button>
@@ -249,7 +567,7 @@ function renderLogBlocks() {
                     <button type="button" class="log-block-btn log-block-btn--delete" title="삭제">✕</button>
                 </div>
             </div>
-            <textarea class="log-block-textarea" placeholder="채팅 로그를 붙여넣으세요...">${escapeHTML(block.content)}</textarea>
+            <div class="log-block-textarea" contenteditable="true" data-placeholder="채팅 로그를 붙여넣으세요...">${contentHtml}</div>
             <div class="log-block-options">
                 <label class="log-block-option">
                     <input type="checkbox" ${block.collapsible ? 'checked' : ''} data-option="collapsible">
@@ -257,7 +575,7 @@ function renderLogBlocks() {
                 </label>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 
     // 이벤트 리스너 연결
     logBlocksContainer.querySelectorAll('.log-block').forEach(blockEl => {
@@ -266,10 +584,23 @@ function renderLogBlocks() {
         // 드래그 앤 드롭 이벤트
         setupBlockDragEvents(blockEl, blockId);
 
-        // 텍스트 영역
-        const textarea = blockEl.querySelector('.log-block-textarea');
-        textarea.addEventListener('input', (e) => {
-            updateLogBlock(blockId, { content: e.target.value });
+        // 콘텐츠 영역 (contenteditable)
+        const contentEl = blockEl.querySelector('.log-block-textarea');
+
+        // 입력 이벤트
+        contentEl.addEventListener('input', (e) => {
+            updateLogBlock(blockId, { content: getContentEditableContent(contentEl) });
+        });
+
+        // 붙여넣기 이벤트 (이미지 처리)
+        contentEl.addEventListener('paste', async (e) => {
+            const handled = await handlePasteWithImages(e, blockId);
+            if (handled) {
+                // 약간의 딜레이 후 저장 (DOM 업데이트 대기)
+                setTimeout(() => {
+                    updateLogBlock(blockId, { content: getContentEditableContent(contentEl) });
+                }, 100);
+            }
         });
 
         // 제목
@@ -309,6 +640,7 @@ function renderLogBlocks() {
 // ===== 설정 상태 =====
 const settings = {
     // 캐릭터 정보
+    logTitle: "",
     charName: "",
     charLink: "",
     userName: "",
@@ -341,6 +673,9 @@ const settings = {
     lineHeight: 1.8,
     letterSpacing: 0,
     paragraphSpacing: 1.2,
+    // 헤더 정렬
+    headerAlign: "left",
+    logTitleSize: 1.8,
     // 테두리 & 그림자
     borderWidth: 0,
     borderColor: "#e4e4e7",
@@ -366,6 +701,14 @@ const settings = {
     bubbleBorderWidth: 2,
     bubbleBorderColor: "#6366f1",
     bubbleBorderLeftOnly: false,
+    // 이미지 설정
+    imageMaxWidth: 500,
+    imageMargin: 0.5,
+    imageBorderRadius: 8,
+    imageAlign: "center",
+    imageBorderWidth: 0,
+    imageBorderColor: "#e5e5e5",
+    imageShadow: "none",
     // 커스텀 옵션
     showNametag: true,
 };
@@ -453,6 +796,31 @@ const themePresets = {
         borderColor: "#27272a",
         aiBubbleColor: "#18181b", userBubbleColor: "#2a0a2e",
         bubbleBorderColor: "#d946ef", bgGradientColor: "#2a0a2e"
+    },
+    // Special Themes
+    "special-sepia": {
+        bgColor: "#f5f0e6", textColor: "#3d3020", charColor: "#6b5a3e",
+        boldColor: "#8b6914", italicColor: "#a67c52", dialogueColor: "#5c4d3c", dialogueBgColor: "#ebe3d3",
+        badgeModelColor: "#6b5a3e", badgePromptColor: "#8b7355", badgeSubColor: "#a69076",
+        borderColor: "#d4c9b5",
+        aiBubbleColor: "#ebe3d3", userBubbleColor: "#e0d5c1",
+        bubbleBorderColor: "#a67c52", bgGradientColor: "#ebe3d3"
+    },
+    "special-noir": {
+        bgColor: "#1a1a1a", textColor: "#c0c0c0", charColor: "#e0e0e0",
+        boldColor: "#ffffff", italicColor: "#909090", dialogueColor: "#d0d0d0", dialogueBgColor: "#2a2a2a",
+        badgeModelColor: "#505050", badgePromptColor: "#707070", badgeSubColor: "#808080",
+        borderColor: "#333333",
+        aiBubbleColor: "#252525", userBubbleColor: "#303030",
+        bubbleBorderColor: "#606060", bgGradientColor: "#0d0d0d"
+    },
+    "special-neon": {
+        bgColor: "#0a0a12", textColor: "#e0e0ff", charColor: "#00ffff",
+        boldColor: "#ff00ff", italicColor: "#00ff88", dialogueColor: "#ffff00", dialogueBgColor: "#1a1a2e",
+        badgeModelColor: "#ff0080", badgePromptColor: "#00ffff", badgeSubColor: "#80ff00",
+        borderColor: "#2a2a4e",
+        aiBubbleColor: "#12121f", userBubbleColor: "#1a1a2e",
+        bubbleBorderColor: "#ff00ff", bgGradientColor: "#0f0f1a"
     }
 };
 
@@ -467,15 +835,25 @@ function adjustColor(hex, amount) {
 
 // ===== 마크다운 파싱 =====
 function parseMarkdown(text) {
-    // HTML 이스케이프
-    let result = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-
     // 플레이스홀더로 치환하여 충돌 방지
     const placeholders = [];
     let placeholderIndex = 0;
+
+    // img 태그를 먼저 플레이스홀더로 대체 (escape 되지 않도록)
+    let result = text.replace(/<img\s+src="([^"]+)"[^>]*>/gi, (match, src) => {
+        const placeholder = `__IMG_${placeholderIndex++}__`;
+        placeholders.push({
+            placeholder,
+            html: `<div style="${getImageWrapperStyle()}"><img src="${src}" style="${getImageStyle()}"></div>`
+        });
+        return placeholder;
+    });
+
+    // HTML 이스케이프 (img 제외)
+    result = result
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
 
     // 볼드 (**text**) - 먼저 처리
     result = result.replace(/\*\*(.+?)\*\*/g, (match, content) => {
@@ -539,23 +917,79 @@ function getParagraphStyle() {
     return `margin: 0 0 ${settings.paragraphSpacing}em 0; text-align: ${settings.textAlign}; word-break: keep-all;`;
 }
 
+// HTML 블록 콘텐츠 파싱 (이미지 + 텍스트 혼합 처리)
+function parseBlockContent(htmlContent) {
+    // HTML이 아니면 (순수 텍스트) 기존 방식으로 처리
+    if (!htmlContent.includes('<')) {
+        const lines = htmlContent.split(/\r?\n/).filter(line => line.trim() !== '');
+        return lines.map(line => {
+            const parsed = parseLine(line);
+            return generateBubbleHTML(parsed, true);
+        }).join('\n');
+    }
+
+    // HTML 파싱
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+    const container = doc.body.firstChild;
+
+    const outputParts = [];
+
+    // 재귀적으로 노드 처리
+    function processNode(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            // 텍스트 노드: 라인별로 파싱
+            const text = node.textContent;
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            lines.forEach(line => {
+                const parsed = parseLine(line);
+                outputParts.push(generateBubbleHTML(parsed, true));
+            });
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const tag = node.tagName.toLowerCase();
+
+            if (tag === 'img') {
+                // 이미지: background-image div로 출력 (아카라이브 호환)
+                outputParts.push(`    ${getImageDivHTML(node.src)}`);
+            } else if (tag === 'br') {
+                // br은 무시 (줄바꿈은 텍스트에서 처리)
+            } else if (tag === 'div' || tag === 'p') {
+                // div, p: 자식 처리
+                node.childNodes.forEach(child => processNode(child));
+            } else {
+                // 기타 태그: 내부 텍스트 추출하여 처리
+                const text = node.textContent;
+                const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+                lines.forEach(line => {
+                    const parsed = parseLine(line);
+                    outputParts.push(generateBubbleHTML(parsed, true));
+                });
+            }
+        }
+    }
+
+    container.childNodes.forEach(child => processNode(child));
+
+    return outputParts.join('\n');
+}
+
 // 라인 파싱 (마커 감지)
 function parseLine(line) {
     const trimmed = line.trim();
 
-    // < 마커: User 대사 (왼쪽 방향 화살표 = 오른쪽 정렬)
-    if (trimmed.startsWith('<')) {
+    // << 마커: User 대사 (왼쪽 방향 화살표 = 오른쪽 정렬)
+    if (trimmed.startsWith('<<')) {
         return {
             type: 'user',
-            content: trimmed.substring(1).trim()
+            content: trimmed.substring(2).trim()
         };
     }
 
-    // > 마커: AI 대사 (오른쪽 방향 화살표 = 왼쪽 정렬)
-    if (trimmed.startsWith('>')) {
+    // >> 마커: AI 대사 (오른쪽 방향 화살표 = 왼쪽 정렬)
+    if (trimmed.startsWith('>>')) {
         return {
             type: 'ai',
-            content: trimmed.substring(1).trim()
+            content: trimmed.substring(2).trim()
         };
     }
 
@@ -577,16 +1011,100 @@ function getContrastTextColor(bgColor) {
     return brightness > 128 ? '#1a1a1a' : '#f5f5f5';
 }
 
+// 그림자 스타일 생성
+function getImageShadowStyle() {
+    switch (settings.imageShadow) {
+        case 'soft':
+            return 'box-shadow: 0 4px 12px rgba(0,0,0,0.1);';
+        case 'medium':
+            return 'box-shadow: 0 6px 20px rgba(0,0,0,0.15);';
+        case 'strong':
+            return 'box-shadow: 0 8px 30px rgba(0,0,0,0.25);';
+        case 'glow':
+            return `box-shadow: 0 0 20px ${settings.imageBorderColor}80;`;
+        default:
+            return '';
+    }
+}
+
+// 이미지 HTML 생성 (아카라이브 호환 - 단순 img + div 래퍼)
+function getImageDivHTML(src) {
+    // 정렬에 따른 마진
+    let marginStyle = `margin: ${settings.imageMargin}em auto;`; // 기본 center
+    if (settings.imageAlign === 'left') {
+        marginStyle = `margin: ${settings.imageMargin}em auto ${settings.imageMargin}em 0;`;
+    } else if (settings.imageAlign === 'right') {
+        marginStyle = `margin: ${settings.imageMargin}em 0 ${settings.imageMargin}em auto;`;
+    }
+
+    // 테두리 스타일
+    let borderStyle = '';
+    if (settings.imageBorderWidth > 0) {
+        borderStyle = `border: ${settings.imageBorderWidth}px solid ${settings.imageBorderColor};`;
+    }
+
+    // 그림자 스타일
+    const shadowStyle = getImageShadowStyle();
+
+    // div: 정렬, 마진, 너비
+    const divStyle = `max-width: ${settings.imageMaxWidth}px; ${marginStyle} text-align: center;`;
+    // img: border-radius, 테두리, 그림자
+    const imgStyle = `max-width: 100%; border-radius: ${settings.imageBorderRadius}px; ${borderStyle} ${shadowStyle}`;
+
+    return `<div style="${divStyle}"><img src="${src}" style="${imgStyle}"></div>`;
+}
+
+// 미리보기용 이미지 스타일 (img 태그 사용)
+function getImageWrapperStyle() {
+    // 정렬에 따른 스타일
+    let alignStyle = 'text-align: left;';
+    if (settings.imageAlign === 'center') {
+        alignStyle = 'text-align: center;';
+    } else if (settings.imageAlign === 'right') {
+        alignStyle = 'text-align: right;';
+    }
+
+    return `${alignStyle} margin: ${settings.imageMargin}em 0;`;
+}
+
+function getImageStyle() {
+    // 테두리 스타일
+    let borderStyle = '';
+    if (settings.imageBorderWidth > 0) {
+        borderStyle = `border: ${settings.imageBorderWidth}px solid ${settings.imageBorderColor};`;
+    }
+
+    // 그림자 스타일
+    const shadowStyle = getImageShadowStyle();
+
+    return `max-width: ${settings.imageMaxWidth}px; height: auto; border-radius: ${settings.imageBorderRadius}px; ${borderStyle} ${shadowStyle}`;
+}
+
+// 이미지 HTML 생성 (래퍼 div 포함)
+function getImageHTML(src) {
+    return `<div style="${getImageWrapperStyle()}"><img src="${src}" style="${getImageStyle()}"></div>`;
+}
+
 // 말풍선용 마크다운 파싱 (대사 스타일 제외)
 function parseMarkdownForBubble(text) {
-    // HTML 이스케이프
-    let result = text
+    const placeholders = [];
+    let placeholderIndex = 0;
+
+    // img 태그를 먼저 플레이스홀더로 대체 (escape 되지 않도록)
+    let result = text.replace(/<img\s+src="([^"]+)"[^>]*>/gi, (match, src) => {
+        const placeholder = `__IMG_${placeholderIndex++}__`;
+        placeholders.push({
+            placeholder,
+            html: `<div style="${getImageWrapperStyle()}"><img src="${src}" style="${getImageStyle()}"></div>`
+        });
+        return placeholder;
+    });
+
+    // HTML 이스케이프 (img 제외)
+    result = result
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
-
-    const placeholders = [];
-    let placeholderIndex = 0;
 
     // 볼드 (**text**)
     result = result.replace(/\*\*(.+?)\*\*/g, (match, content) => {
@@ -677,8 +1195,11 @@ function generateBubbleHTML(parsed, isForCode = false) {
 
 // ===== HTML 생성 (인라인 스타일 div) =====
 function generateHTML() {
-    // 모든 블록의 내용 수집
-    const blocksWithContent = logBlocks.filter(b => b.content.trim() !== "");
+    // 모든 블록의 내용 수집 (HTML에서 텍스트 추출하여 비어있는지 확인)
+    const blocksWithContent = logBlocks.filter(b => {
+        const text = b.content.replace(/<[^>]*>/g, '').trim();
+        return text !== '' || b.content.includes('<img');
+    });
 
     if (blocksWithContent.length === 0) {
         return "";
@@ -699,22 +1220,31 @@ function generateHTML() {
 
     // 헤더 HTML 생성
     let headerHTML = "";
-    const hasHeader = settings.charName || settings.aiModel || settings.promptName || settings.subModel;
+    const hasHeader = settings.logTitle || settings.charName || settings.aiModel || settings.promptName || settings.subModel;
 
     if (hasHeader) {
         const headerBgLight = adjustColor(settings.bgColor, 12);
         const headerBgDark = adjustColor(settings.bgColor, 6);
         const headerStyle = `margin-bottom: 1.5em; padding: 1.5em; background: linear-gradient(135deg, ${headerBgLight} 0%, ${headerBgDark} 100%); border-radius: 16px; border: 1px solid ${adjustColor(settings.bgColor, 25)}40;`;
+        const headerTextAlign = settings.headerAlign;
+        const justifyContent = headerTextAlign === 'center' ? 'center' : headerTextAlign === 'right' ? 'flex-end' : 'flex-start';
 
-        // 캐릭터 이름
-        let titleHTML = "";
+        // 캐릭터 이름 (상단 뱃지)
+        let charBadgeHTML = "";
         if (settings.charName) {
-            const titleStyle = `margin: 0; font-size: 1.5em; font-weight: 800; color: ${settings.charColor}; letter-spacing: -0.02em;`;
+            const charBadgeStyle = `display: inline-block; padding: 6px 14px; background: ${settings.charColor}; color: ${getContrastTextColor(settings.charColor)}; border-radius: ${settings.badgeRadius}px; font-size: 0.8em; font-weight: 700; letter-spacing: 0.02em;`;
             if (settings.charLink) {
-                titleHTML = `    <p style="${titleStyle}"><a href="${settings.charLink}" target="_blank" style="color: inherit; text-decoration: none; transition: opacity 0.2s;">${settings.charName}</a></p>\n`;
+                charBadgeHTML = `    <div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><a href="${settings.charLink}" target="_blank" style="text-decoration: none;"><span style="${charBadgeStyle}">${settings.charName}</span></a></div>\n`;
             } else {
-                titleHTML = `    <p style="${titleStyle}">${settings.charName}</p>\n`;
+                charBadgeHTML = `    <div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><span style="${charBadgeStyle}">${settings.charName}</span></div>\n`;
             }
+        }
+
+        // 로그 제목 (크게 중앙)
+        let logTitleHTML = "";
+        if (settings.logTitle) {
+            const logTitleStyle = `margin: 0; font-size: ${settings.logTitleSize}em; font-weight: 800; color: ${settings.textColor}; letter-spacing: -0.02em; text-align: ${headerTextAlign};`;
+            logTitleHTML = `    <p style="${logTitleStyle}">${settings.logTitle}</p>\n`;
         }
 
         // 태그들 (모델, 프롬프트, 보조)
@@ -734,20 +1264,17 @@ function generateHTML() {
         }
 
         if (tags.length > 0) {
-            const marginTop = settings.charName ? "margin-top: 1em;" : "";
-            tagsHTML = `    <div style="${marginTop}">${tags.join("")}</div>\n`;
+            const marginTop = (settings.logTitle || settings.charName) ? "margin-top: 1em;" : "";
+            tagsHTML = `    <div style="${marginTop} display: flex; flex-wrap: wrap; justify-content: ${justifyContent};">${tags.join("")}</div>\n`;
         }
 
-        headerHTML = `  <div style="${headerStyle}">\n${titleHTML}${tagsHTML}  </div>\n`;
+        headerHTML = `  <div style="${headerStyle}">\n${charBadgeHTML}${logTitleHTML}${tagsHTML}  </div>\n`;
     }
 
     // 블록별 HTML 생성
     const blocksHTML = blocksWithContent.map((block, index) => {
-        const lines = block.content.split(/\r?\n/).filter((line) => line.trim() !== "");
-        const linesHTML = lines.map((line) => {
-            const parsed = parseLine(line);
-            return generateBubbleHTML(parsed, true);
-        }).join("\n");
+        // HTML 콘텐츠에서 라인별로 처리 (이미지 포함)
+        const linesHTML = parseBlockContent(block.content);
 
         // 접기/펼치기 사용 여부
         if (block.collapsible) {
@@ -834,8 +1361,11 @@ function escapeHTMLContent(str) {
 function updatePreview() {
     if (!previewEl) return;
 
-    // 모든 블록의 내용 수집
-    const blocksWithContent = logBlocks.filter(b => b.content.trim() !== "");
+    // 모든 블록의 내용 수집 (HTML에서 텍스트 추출하여 비어있는지 확인)
+    const blocksWithContent = logBlocks.filter(b => {
+        const text = b.content.replace(/<[^>]*>/g, '').trim();
+        return text !== '' || b.content.includes('<img');
+    });
 
     // 미리보기 스타일 적용 (컨테이너)
     previewEl.style.maxWidth = `${settings.containerWidth}px`;
@@ -894,24 +1424,33 @@ function updatePreview() {
     } else {
         // 헤더 생성
         let headerHTML = "";
-        const hasHeader = settings.charName || settings.aiModel || settings.promptName || settings.subModel;
+        const hasHeader = settings.logTitle || settings.charName || settings.aiModel || settings.promptName || settings.subModel;
 
         if (hasHeader) {
             const headerBgLight = adjustColor(settings.bgColor, 12);
             const headerBgDark = adjustColor(settings.bgColor, 6);
             const borderColor = adjustColor(settings.bgColor, 25);
+            const headerTextAlign = settings.headerAlign;
+            const justifyContent = headerTextAlign === 'center' ? 'center' : headerTextAlign === 'right' ? 'flex-end' : 'flex-start';
 
-            // 캐릭터 이름
-            let titleHTML = "";
+            // 캐릭터 이름 (상단 뼉지)
+            let charBadgeHTML = "";
             if (settings.charName) {
+                const charBadgeStyle = `display: inline-block; padding: 6px 14px; background: ${settings.charColor}; color: ${getContrastTextColor(settings.charColor)}; border-radius: ${settings.badgeRadius}px; font-size: 0.8em; font-weight: 700; letter-spacing: 0.02em;`;
                 if (settings.charLink) {
-                    titleHTML = `<p style="margin: 0; font-size: 1.5em; font-weight: 800; color: ${settings.charColor}; letter-spacing: -0.02em;"><a href="${settings.charLink}" target="_blank" style="color: inherit; text-decoration: none;">${settings.charName}</a></p>`;
+                    charBadgeHTML = `<div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><a href="${settings.charLink}" target="_blank" style="text-decoration: none;"><span style="${charBadgeStyle}">${settings.charName}</span></a></div>`;
                 } else {
-                    titleHTML = `<p style="margin: 0; font-size: 1.5em; font-weight: 800; color: ${settings.charColor}; letter-spacing: -0.02em;">${settings.charName}</p>`;
+                    charBadgeHTML = `<div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><span style="${charBadgeStyle}">${settings.charName}</span></div>`;
                 }
             }
 
-            // 태그들
+            // 로그 제목 (크게 중앙)
+            let logTitleHTML = "";
+            if (settings.logTitle) {
+                logTitleHTML = `<p style="margin: 0; font-size: ${settings.logTitleSize}em; font-weight: 800; color: ${settings.textColor}; letter-spacing: -0.02em; text-align: ${headerTextAlign};">${settings.logTitle}</p>`;
+            }
+
+            // 태그들 (모델, 프롬프트, 보조모델)
             let tagsHTML = "";
             const tags = [];
 
@@ -927,11 +1466,11 @@ function updatePreview() {
             }
 
             if (tags.length > 0) {
-                const marginTop = settings.charName ? "margin-top: 1em;" : "";
-                tagsHTML = `<div style="${marginTop}">${tags.join("")}</div>`;
+                const marginTop = (settings.logTitle || settings.charName) ? "margin-top: 1em;" : "";
+                tagsHTML = `<div style="${marginTop} display: flex; flex-wrap: wrap; justify-content: ${justifyContent};">${tags.join("")}</div>`;
             }
 
-            headerHTML = `<div style="margin-bottom: 1.5em; padding: 1.5em; background: linear-gradient(135deg, ${headerBgLight} 0%, ${headerBgDark} 100%); border-radius: 16px; border: 1px solid ${borderColor}40;">${titleHTML}${tagsHTML}</div>`;
+            headerHTML = `<div style="margin-bottom: 1.5em; padding: 1.5em; background: linear-gradient(135deg, ${headerBgLight} 0%, ${headerBgDark} 100%); border-radius: 16px; border: 1px solid ${borderColor}40;">${charBadgeHTML}${logTitleHTML}${tagsHTML}</div>`;
         }
 
         // 블록별 HTML 생성
@@ -1005,6 +1544,7 @@ tabBtns.forEach((btn) => {
 // ===== 설정 입력 동기화 =====
 // 캐릭터 정보
 const charInputs = {
+    "log-title": "logTitle",
     "char-name": "charName",
     "char-link": "charLink",
     "user-name": "userName",
@@ -1173,6 +1713,11 @@ const rangeInputs = [
     { id: "style-badge-radius", key: "badgeRadius", valueId: "style-badge-radius-value", unit: "px" },
     { id: "style-nametag-size", key: "nametagFontSize", valueId: "style-nametag-size-value", unit: "em" },
     { id: "style-bubble-border-width", key: "bubbleBorderWidth", valueId: "style-bubble-border-width-value", unit: "px" },
+    { id: "style-log-title-size", key: "logTitleSize", valueId: "style-log-title-size-value", unit: "em" },
+    // 이미지 설정
+    { id: "style-image-max-width", key: "imageMaxWidth", valueId: "style-image-max-width-value", unit: "px" },
+    { id: "style-image-border-radius", key: "imageBorderRadius", valueId: "style-image-border-radius-value", unit: "px" },
+    { id: "style-image-margin", key: "imageMargin", valueId: "style-image-margin-value", unit: "em" },
 ];
 
 rangeInputs.forEach(({ id, key, valueId, unit }) => {
@@ -1249,11 +1794,63 @@ if (borderStyleSelect) {
     });
 }
 
+// 헤더 정렬 셀렉트
+const headerAlignSelect = document.getElementById("style-header-align");
+if (headerAlignSelect) {
+    headerAlignSelect.addEventListener("change", (e) => {
+        settings.headerAlign = e.target.value;
+        updatePreview();
+        saveToStorage();
+    });
+}
+
 // 뱃지 스타일 셀렉트
 const badgeStyleSelect = document.getElementById("style-badge-style");
 if (badgeStyleSelect) {
     badgeStyleSelect.addEventListener("change", (e) => {
         settings.badgeStyle = e.target.value;
+        updatePreview();
+        saveToStorage();
+    });
+}
+
+// 이미지 테두리 두께
+const imageBorderWidthSlider = document.getElementById("style-image-border-width");
+const imageBorderWidthValue = document.getElementById("style-image-border-width-value");
+if (imageBorderWidthSlider) {
+    imageBorderWidthSlider.addEventListener("input", (e) => {
+        settings.imageBorderWidth = parseFloat(e.target.value);
+        if (imageBorderWidthValue) imageBorderWidthValue.textContent = `${e.target.value}px`;
+        updatePreview();
+        saveToStorage();
+    });
+}
+
+// 이미지 테두리 색상
+const imageBorderColorInput = document.getElementById("style-image-border-color");
+if (imageBorderColorInput) {
+    imageBorderColorInput.addEventListener("input", (e) => {
+        settings.imageBorderColor = e.target.value;
+        updatePreview();
+        saveToStorage();
+    });
+}
+
+// 이미지 그림자
+const imageShadowSelect = document.getElementById("style-image-shadow");
+if (imageShadowSelect) {
+    imageShadowSelect.addEventListener("change", (e) => {
+        settings.imageShadow = e.target.value;
+        updatePreview();
+        saveToStorage();
+    });
+}
+
+// 이미지 정렬 셀렉트
+const imageAlignSelect = document.getElementById("style-image-align");
+if (imageAlignSelect) {
+    imageAlignSelect.addEventListener("change", (e) => {
+        settings.imageAlign = e.target.value;
         updatePreview();
         saveToStorage();
     });
@@ -1382,7 +1979,22 @@ if (copyBtn) {
         if (!html) return;
 
         try {
-            await navigator.clipboard.writeText(html);
+            // Rich HTML용: 태그 사이 공백/개행 제거 (WYSIWYG 에디터에서 불필요한 공백 방지)
+            const minifiedHtml = html
+                .replace(/>\s+</g, '><')  // 태그 사이 공백 제거
+                .replace(/^\s+/gm, '');    // 줄 시작 공백 제거
+
+            // Rich HTML 클립보드로 복사 (WYSIWYG 에디터에 붙여넣기 시 서식 유지)
+            const htmlBlob = new Blob([minifiedHtml], { type: 'text/html' });
+            const textBlob = new Blob([html], { type: 'text/plain' });  // 텍스트는 원본 유지 (가독성)
+
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/html': htmlBlob,
+                    'text/plain': textBlob
+                })
+            ]);
+
             copyBtn.classList.add("copied");
             copyBtn.querySelector(".copy-text").textContent = "복사됨!";
 
@@ -1392,6 +2004,18 @@ if (copyBtn) {
             }, 2000);
         } catch (err) {
             console.error("복사 실패:", err);
+            // 폴백: 기존 텍스트 복사 방식
+            try {
+                await navigator.clipboard.writeText(html);
+                copyBtn.classList.add("copied");
+                copyBtn.querySelector(".copy-text").textContent = "복사됨!";
+                setTimeout(() => {
+                    copyBtn.classList.remove("copied");
+                    copyBtn.querySelector(".copy-text").textContent = "복사";
+                }, 2000);
+            } catch (fallbackErr) {
+                console.error("폴백 복사도 실패:", fallbackErr);
+            }
         }
     });
 }
@@ -1423,6 +2047,7 @@ if (hasStoredData && logBlocks.length > 0) {
 function syncAllUIFromSettings() {
     // 캐릭터 정보 동기화
     const charInputMap = {
+        "log-title": "logTitle",
         "char-name": "charName",
         "char-link": "charLink",
         "user-name": "userName",
@@ -1455,6 +2080,11 @@ function syncAllUIFromSettings() {
         { id: "style-badge-radius", key: "badgeRadius", valueId: "style-badge-radius-value", unit: "px" },
         { id: "style-nametag-size", key: "nametagFontSize", valueId: "style-nametag-size-value", unit: "em" },
         { id: "style-bubble-border-width", key: "bubbleBorderWidth", valueId: "style-bubble-border-width-value", unit: "px" },
+        { id: "style-log-title-size", key: "logTitleSize", valueId: "style-log-title-size-value", unit: "em" },
+        // 이미지 설정
+        { id: "style-image-max-width", key: "imageMaxWidth", valueId: "style-image-max-width-value", unit: "px" },
+        { id: "style-image-border-radius", key: "imageBorderRadius", valueId: "style-image-border-radius-value", unit: "px" },
+        { id: "style-image-margin", key: "imageMargin", valueId: "style-image-margin-value", unit: "em" },
     ];
     rangeMap.forEach(({ id, key, valueId, unit }) => {
         const rangeEl = document.getElementById(id);
@@ -1477,9 +2107,29 @@ function syncAllUIFromSettings() {
     const borderStyleEl = document.getElementById("style-border-style");
     if (borderStyleEl) borderStyleEl.value = settings.borderStyle;
 
+    // 헤더 정렬 동기화
+    const headerAlignEl = document.getElementById("style-header-align");
+    if (headerAlignEl) headerAlignEl.value = settings.headerAlign;
+
     // 뱃지 스타일 동기화
     const badgeStyleEl = document.getElementById("style-badge-style");
     if (badgeStyleEl) badgeStyleEl.value = settings.badgeStyle;
+
+    // 이미지 테두리/그림자 동기화
+    const imageBorderWidthEl = document.getElementById("style-image-border-width");
+    const imageBorderWidthValueEl = document.getElementById("style-image-border-width-value");
+    if (imageBorderWidthEl) imageBorderWidthEl.value = settings.imageBorderWidth;
+    if (imageBorderWidthValueEl) imageBorderWidthValueEl.textContent = `${settings.imageBorderWidth}px`;
+
+    const imageBorderColorEl = document.getElementById("style-image-border-color");
+    if (imageBorderColorEl) imageBorderColorEl.value = settings.imageBorderColor;
+
+    const imageShadowEl = document.getElementById("style-image-shadow");
+    if (imageShadowEl) imageShadowEl.value = settings.imageShadow;
+
+    // 이미지 정렬 동기화
+    const imageAlignEl = document.getElementById("style-image-align");
+    if (imageAlignEl) imageAlignEl.value = settings.imageAlign;
 
     // 배경 그라데이션 동기화
     const bgGradientEl = document.getElementById("style-bg-gradient");

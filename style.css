@@ -528,7 +528,7 @@ body.theme-dark .output-tab:hover {
     width: 100%;
     min-height: 200px;
     max-height: 400px;
-    resize: vertical;
+    overflow-y: auto;
     border: none;
     padding: 0.75rem;
     background: var(--bg-surface);
@@ -536,11 +536,25 @@ body.theme-dark .output-tab:hover {
     font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.8rem;
     line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
-.log-block-textarea::placeholder {
+/* contenteditable placeholder */
+.log-block-textarea:empty::before {
+    content: attr(data-placeholder);
     color: var(--text-muted);
     opacity: 0.6;
+    pointer-events: none;
+}
+
+/* 이미지 스타일 */
+.log-block-textarea img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 0.5em 0;
+    display: block;
 }
 
 .log-block-textarea:focus {

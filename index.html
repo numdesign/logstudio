@@ -74,6 +74,10 @@
 
           <!-- 캐릭터 정보 탭 -->
           <div class="settings-content" id="tab-character">
+            <div class="setting-group">
+              <label class="setting-label">로그 제목</label>
+              <input type="text" class="setting-input" id="log-title" placeholder="예: 첫 만남" autocomplete="off">
+            </div>
             <div class="setting-row">
               <div class="setting-group">
                 <label class="setting-label">캐릭터 이름 (AI)</label>
@@ -169,6 +173,20 @@
                 <button type="button" class="theme-preset" data-theme="dark-cyber" title="사이버 펑크">
                   <span class="preset-swatch"
                     style="background: linear-gradient(135deg, #09090b 50%, #d946ef 50%);"></span>
+                </button>
+
+                <!-- Special Themes -->
+                <button type="button" class="theme-preset" data-theme="special-sepia" title="세피아">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #f5f0e6 50%, #6b5a3e 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="special-noir" title="누아르">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #1a1a1a 50%, #c0c0c0 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="special-neon" title="네온">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #0a0a12 50%, #ff00ff 50%);"></span>
                 </button>
               </div>
             </div>
@@ -422,6 +440,27 @@
 
                 <div class="setting-row">
                   <div class="setting-group">
+                    <label class="setting-label">헤더 정렬</label>
+                    <select class="setting-select" id="style-header-align">
+                      <option value="left" selected>왼쪽</option>
+                      <option value="center">가운데</option>
+                      <option value="right">오른쪽</option>
+                    </select>
+                  </div>
+                  <div class="setting-group">
+                    <label class="setting-label">로그 제목 크기</label>
+                    <div class="range-input-wrap">
+                      <input type="range" class="setting-range" id="style-log-title-size" min="1.2" max="3" step="0.1"
+                        value="1.8">
+                      <span class="range-value" id="style-log-title-size-value">1.8em</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="setting-divider"></div>
+
+                <div class="setting-row">
+                  <div class="setting-group">
                     <label class="setting-label">말풍선 최대 너비</label>
                     <div class="range-input-wrap">
                       <input type="range" class="setting-range" id="style-bubble-max-width" min="50" max="100" step="5"
@@ -455,6 +494,79 @@
                       <span class="range-value" id="style-bubble-padding-value">1em</span>
                     </div>
                   </div>
+                </div>
+              </div>
+            </details>
+
+            <!-- 이미지 아코디언 -->
+            <details class="style-accordion">
+              <summary class="style-accordion-header">
+                <span class="accordion-icon">▼</span>
+                <span class="accordion-title">이미지</span>
+              </summary>
+              <div class="style-accordion-content">
+                <div class="setting-row">
+                  <div class="setting-group">
+                    <label class="setting-label">이미지 최대 너비</label>
+                    <div class="range-input-wrap">
+                      <input type="range" class="setting-range" id="style-image-max-width" min="100" max="800" step="50"
+                        value="500">
+                      <span class="range-value" id="style-image-max-width-value">500px</span>
+                    </div>
+                  </div>
+                  <div class="setting-group">
+                    <label class="setting-label">이미지 둥글기</label>
+                    <div class="range-input-wrap">
+                      <input type="range" class="setting-range" id="style-image-border-radius" min="0" max="32" step="2"
+                        value="8">
+                      <span class="range-value" id="style-image-border-radius-value">8px</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-group">
+                    <label class="setting-label">이미지 여백</label>
+                    <div class="range-input-wrap">
+                      <input type="range" class="setting-range" id="style-image-margin" min="0" max="3" step="0.1"
+                        value="0.5">
+                      <span class="range-value" id="style-image-margin-value">0.5em</span>
+                    </div>
+                  </div>
+                  <div class="setting-group">
+                    <label class="setting-label">이미지 정렬</label>
+                    <select class="setting-select" id="style-image-align">
+                      <option value="left">왼쪽</option>
+                      <option value="center" selected>가운데</option>
+                      <option value="right">오른쪽</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="setting-divider"></div>
+
+                <div class="setting-row">
+                  <div class="setting-group">
+                    <label class="setting-label">테두리 두께</label>
+                    <div class="range-input-wrap">
+                      <input type="range" class="setting-range" id="style-image-border-width" min="0" max="8" step="1"
+                        value="0">
+                      <span class="range-value" id="style-image-border-width-value">0px</span>
+                    </div>
+                  </div>
+                  <div class="setting-group">
+                    <label class="setting-label">테두리 색상</label>
+                    <input type="color" class="setting-color" id="style-image-border-color" value="#e5e5e5">
+                  </div>
+                </div>
+                <div class="setting-group">
+                  <label class="setting-label">그림자 효과</label>
+                  <select class="setting-select" id="style-image-shadow">
+                    <option value="none" selected>없음</option>
+                    <option value="soft">부드러운 그림자</option>
+                    <option value="medium">중간 그림자</option>
+                    <option value="strong">진한 그림자</option>
+                    <option value="glow">글로우 효과</option>
+                  </select>
                 </div>
               </div>
             </details>
@@ -662,11 +774,11 @@
               <label class="setting-label">마커 사용법</label>
               <div class="marker-help">
                 <div class="marker-item">
-                  <code>&gt;</code>
+                  <code>&gt;&gt;</code>
                   <span>AI 대사 (왼쪽 말풍선)</span>
                 </div>
                 <div class="marker-item">
-                  <code>&lt;</code>
+                  <code>&lt;&lt;</code>
                   <span>User 대사 (오른쪽 말풍선)</span>
                 </div>
                 <div class="marker-item">
