@@ -685,12 +685,29 @@ let dragOverBlockId = null;
 function setupBlockDragEvents(blockEl, blockId) {
     const dragHandle = blockEl.querySelector('.log-block-btn--drag');
 
+    // 기본적으로 draggable 비활성화 (텍스트 선택 허용)
+    blockEl.setAttribute('draggable', 'false');
+
     // 드래그 핸들에서만 드래그 시작 허용
-    dragHandle.addEventListener('mousedown', () => {
+    dragHandle.addEventListener('mousedown', (e) => {
         blockEl.setAttribute('draggable', 'true');
     });
 
+    // 마우스 떼면 draggable 비활성화 (텍스트 선택 복원)
+    document.addEventListener('mouseup', () => {
+        blockEl.setAttribute('draggable', 'false');
+    });
+
     blockEl.addEventListener('dragstart', (e) => {
+        // 드래그 핸들에서 시작한 경우에만 허용
+        if (!e.target.closest('.log-block-btn--drag') && e.target !== dragHandle) {
+            // 텍스트 영역에서 드래그 시작한 경우 무시
+            if (e.target.closest('.log-block-textarea') || e.target.closest('.log-block-title')) {
+                e.preventDefault();
+                return;
+            }
+        }
+        
         draggedBlockId = blockId;
         blockEl.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
@@ -701,6 +718,7 @@ function setupBlockDragEvents(blockEl, blockId) {
         draggedBlockId = null;
         dragOverBlockId = null;
         blockEl.classList.remove('dragging');
+        blockEl.setAttribute('draggable', 'false');
         document.querySelectorAll('.log-block').forEach(el => {
             el.classList.remove('drag-over', 'drag-over-top', 'drag-over-bottom');
         });
@@ -763,7 +781,7 @@ function renderLogBlocks() {
         // content를 contenteditable에 맞게 HTML로 변환
         const contentHtml = formatContentForEditable(block.content);
         return `
-        <div class="log-block ${block.collapsed ? 'collapsed' : ''}" data-block-id="${block.id}" draggable="true">
+        <div class="log-block ${block.collapsed ? 'collapsed' : ''}" data-block-id="${block.id}" draggable="false">
             <div class="log-block-header">
                 <button type="button" class="log-block-btn log-block-btn--drag" title="드래그하여 순서 변경">☰</button>
                 <button type="button" class="log-block-btn log-block-btn--collapse ${block.collapsed ? 'collapsed' : ''}" title="접기/펼치기">
