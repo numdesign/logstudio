@@ -707,7 +707,7 @@ function setupBlockDragEvents(blockEl, blockId) {
                 return;
             }
         }
-        
+
         draggedBlockId = blockId;
         blockEl.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
