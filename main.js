@@ -124,6 +124,45 @@ function setContentEditableContent(el, content) {
     el.innerHTML = processed;
 }
 
+// Canvas를 통한 이미지 로드 시도 (CORS 우회용)
+async function tryLoadImageViaCanvas(imgSrc) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const dataUrl = canvas.toDataURL('image/png');
+                console.log('Canvas 이미지 로드 성공');
+                resolve(dataUrl);
+            } catch (err) {
+                console.warn('Canvas 변환 실패 (CORS):', err);
+                resolve(null);
+            }
+        };
+        
+        img.onerror = () => {
+            console.warn('Canvas 이미지 로드 실패:', imgSrc);
+            resolve(null);
+        };
+        
+        // 타임아웃 설정 (5초)
+        setTimeout(() => {
+            if (!img.complete) {
+                console.warn('Canvas 이미지 로드 타임아웃:', imgSrc);
+                resolve(null);
+            }
+        }, 5000);
+        
+        img.src = imgSrc;
+    });
+}
+
 // 저장된 content를 contenteditable 표시용 HTML로 변환
 function formatContentForEditable(content) {
     if (!content) return '';
@@ -297,8 +336,13 @@ async function processHtmlWithImages(html) {
         const imgSrc = imagesToProcess[i];
         let base64 = null;
 
+        // 디버깅: 이미지 src 확인
+        console.log(`[이미지 ${i}] src:`, imgSrc);
+
         try {
-            if (imgSrc.startsWith('data:')) {
+            if (!imgSrc || imgSrc.trim() === '') {
+                console.warn('빈 이미지 src');
+            } else if (imgSrc.startsWith('data:')) {
                 base64 = imgSrc;
             } else if (imgSrc.startsWith('blob:')) {
                 try {
@@ -308,14 +352,31 @@ async function processHtmlWithImages(html) {
                 } catch (err) {
                     console.warn('Blob fetch 실패:', err);
                 }
-            } else if (imgSrc.startsWith('http')) {
+            } else if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) {
                 try {
                     const response = await fetch(imgSrc);
                     const blob = await response.blob();
                     base64 = await blobToBase64(blob);
                 } catch (err) {
                     console.warn('외부 이미지 fetch 실패:', err);
+                    // fetch 실패 시 Canvas 방식 시도
+                    base64 = await tryLoadImageViaCanvas(imgSrc);
                 }
+            } else if (imgSrc.startsWith('//')) {
+                // 프로토콜 없는 URL (//cdn.example.com/...)
+                try {
+                    const fullUrl = 'https:' + imgSrc;
+                    const response = await fetch(fullUrl);
+                    const blob = await response.blob();
+                    base64 = await blobToBase64(blob);
+                } catch (err) {
+                    console.warn('프로토콜 없는 URL fetch 실패:', err);
+                    base64 = await tryLoadImageViaCanvas('https:' + imgSrc);
+                }
+            } else {
+                // 상대 경로 또는 알 수 없는 형식 - Canvas 방식 시도
+                console.warn('알 수 없는 이미지 src 형식:', imgSrc);
+                base64 = await tryLoadImageViaCanvas(imgSrc);
             }
 
             if (base64) {
@@ -323,6 +384,7 @@ async function processHtmlWithImages(html) {
                 const imgHtml = `<img src="${compressed}" style="max-width:100%;border-radius:8px;margin:0.5em 0;">`;
                 cleanHtml = cleanHtml.replace(`__IMG_PLACEHOLDER_${i}__`, '\n' + imgHtml + '\n');
             } else {
+                console.warn('이미지 변환 실패, placeholder 제거');
                 cleanHtml = cleanHtml.replace(`__IMG_PLACEHOLDER_${i}__`, '');
             }
         } catch (err) {
