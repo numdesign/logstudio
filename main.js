@@ -722,7 +722,8 @@ const themePresets = {
         badgeModelColor: "#171717", badgePromptColor: "#737373", badgeSubColor: "#a3a3a3",
         borderColor: "#e5e5e5",
         aiBubbleColor: "#f5f5f5", userBubbleColor: "#e0f2fe",
-        bubbleBorderColor: "#6366f1", bgGradientColor: "#f5f5f5"
+        bubbleBorderColor: "#6366f1", bgGradientColor: "#f5f5f5",
+        imageBorderColor: "#e5e5e5"
     },
     "light-peach": {
         bgColor: "#fff5f5", textColor: "#4c0519", charColor: "#be123c",
@@ -730,7 +731,8 @@ const themePresets = {
         badgeModelColor: "#be123c", badgePromptColor: "#fb7185", badgeSubColor: "#fda4af",
         borderColor: "#fecdd3",
         aiBubbleColor: "#ffe4e6", userBubbleColor: "#fecdd3",
-        bubbleBorderColor: "#fb7185", bgGradientColor: "#ffe4e6"
+        bubbleBorderColor: "#fb7185", bgGradientColor: "#ffe4e6",
+        imageBorderColor: "#fecdd3"
     },
     "light-mint": {
         bgColor: "#f0fdfa", textColor: "#134e4a", charColor: "#0d9488",
@@ -738,7 +740,8 @@ const themePresets = {
         badgeModelColor: "#0d9488", badgePromptColor: "#5eead4", badgeSubColor: "#99f6e4",
         borderColor: "#99f6e4",
         aiBubbleColor: "#ccfbf1", userBubbleColor: "#99f6e4",
-        bubbleBorderColor: "#2dd4bf", bgGradientColor: "#ccfbf1"
+        bubbleBorderColor: "#2dd4bf", bgGradientColor: "#ccfbf1",
+        imageBorderColor: "#99f6e4"
     },
     "light-sky": {
         bgColor: "#f0f9ff", textColor: "#0c4a6e", charColor: "#0284c7",
@@ -746,7 +749,8 @@ const themePresets = {
         badgeModelColor: "#0284c7", badgePromptColor: "#38bdf8", badgeSubColor: "#7dd3fc",
         borderColor: "#bae6fd",
         aiBubbleColor: "#e0f2fe", userBubbleColor: "#bae6fd",
-        bubbleBorderColor: "#38bdf8", bgGradientColor: "#e0f2fe"
+        bubbleBorderColor: "#38bdf8", bgGradientColor: "#e0f2fe",
+        imageBorderColor: "#bae6fd"
     },
     "light-lilac": {
         bgColor: "#faf5ff", textColor: "#4c1d95", charColor: "#7c3aed",
@@ -754,7 +758,8 @@ const themePresets = {
         badgeModelColor: "#7c3aed", badgePromptColor: "#a78bfa", badgeSubColor: "#c4b5fd",
         borderColor: "#ddd6fe",
         aiBubbleColor: "#ede9fe", userBubbleColor: "#ddd6fe",
-        bubbleBorderColor: "#a78bfa", bgGradientColor: "#ede9fe"
+        bubbleBorderColor: "#a78bfa", bgGradientColor: "#ede9fe",
+        imageBorderColor: "#ddd6fe"
     },
     // Dark Themes
     "dark-space": {
@@ -763,7 +768,8 @@ const themePresets = {
         badgeModelColor: "#334155", badgePromptColor: "#475569", badgeSubColor: "#64748b",
         borderColor: "#1e293b",
         aiBubbleColor: "#1e293b", userBubbleColor: "#334155",
-        bubbleBorderColor: "#818cf8", bgGradientColor: "#1e293b"
+        bubbleBorderColor: "#818cf8", bgGradientColor: "#1e293b",
+        imageBorderColor: "#334155"
     },
     "dark-charcoal": {
         bgColor: "#18181b", textColor: "#fafafa", charColor: "#fbbf24",
@@ -771,7 +777,8 @@ const themePresets = {
         badgeModelColor: "#d97706", badgePromptColor: "#f59e0b", badgeSubColor: "#fbbf24",
         borderColor: "#27272a",
         aiBubbleColor: "#27272a", userBubbleColor: "#3f3f46",
-        bubbleBorderColor: "#fbbf24", bgGradientColor: "#27272a"
+        bubbleBorderColor: "#fbbf24", bgGradientColor: "#27272a",
+        imageBorderColor: "#3f3f46"
     },
     "dark-forest": {
         bgColor: "#052e16", textColor: "#f0fdf4", charColor: "#4ade80",
@@ -779,7 +786,8 @@ const themePresets = {
         badgeModelColor: "#15803d", badgePromptColor: "#22c55e", badgeSubColor: "#4ade80",
         borderColor: "#14532d",
         aiBubbleColor: "#14532d", userBubbleColor: "#166534",
-        bubbleBorderColor: "#4ade80", bgGradientColor: "#14532d"
+        bubbleBorderColor: "#4ade80", bgGradientColor: "#14532d",
+        imageBorderColor: "#166534"
     },
     "dark-navy": {
         bgColor: "#172554", textColor: "#eff6ff", charColor: "#60a5fa",
@@ -787,7 +795,8 @@ const themePresets = {
         badgeModelColor: "#2563eb", badgePromptColor: "#3b82f6", badgeSubColor: "#60a5fa",
         borderColor: "#1e3a8a",
         aiBubbleColor: "#1e3a8a", userBubbleColor: "#1e40af",
-        bubbleBorderColor: "#60a5fa", bgGradientColor: "#1e3a8a"
+        bubbleBorderColor: "#60a5fa", bgGradientColor: "#1e3a8a",
+        imageBorderColor: "#1e40af"
     },
     "dark-cyber": {
         bgColor: "#09090b", textColor: "#fdf4ff", charColor: "#d946ef",
@@ -795,7 +804,8 @@ const themePresets = {
         badgeModelColor: "#a21caf", badgePromptColor: "#c026d3", badgeSubColor: "#e879f9",
         borderColor: "#27272a",
         aiBubbleColor: "#18181b", userBubbleColor: "#2a0a2e",
-        bubbleBorderColor: "#d946ef", bgGradientColor: "#2a0a2e"
+        bubbleBorderColor: "#d946ef", bgGradientColor: "#2a0a2e",
+        imageBorderColor: "#d946ef"
     },
     // Special Themes
     "special-sepia": {
@@ -804,7 +814,8 @@ const themePresets = {
         badgeModelColor: "#6b5a3e", badgePromptColor: "#8b7355", badgeSubColor: "#a69076",
         borderColor: "#d4c9b5",
         aiBubbleColor: "#ebe3d3", userBubbleColor: "#e0d5c1",
-        bubbleBorderColor: "#a67c52", bgGradientColor: "#ebe3d3"
+        bubbleBorderColor: "#a67c52", bgGradientColor: "#ebe3d3",
+        imageBorderColor: "#d4c9b5"
     },
     "special-noir": {
         bgColor: "#1a1a1a", textColor: "#c0c0c0", charColor: "#e0e0e0",
@@ -812,7 +823,8 @@ const themePresets = {
         badgeModelColor: "#505050", badgePromptColor: "#707070", badgeSubColor: "#808080",
         borderColor: "#333333",
         aiBubbleColor: "#252525", userBubbleColor: "#303030",
-        bubbleBorderColor: "#606060", bgGradientColor: "#0d0d0d"
+        bubbleBorderColor: "#606060", bgGradientColor: "#0d0d0d",
+        imageBorderColor: "#404040"
     },
     "special-neon": {
         bgColor: "#0a0a12", textColor: "#e0e0ff", charColor: "#00ffff",
@@ -820,7 +832,8 @@ const themePresets = {
         badgeModelColor: "#ff0080", badgePromptColor: "#00ffff", badgeSubColor: "#80ff00",
         borderColor: "#2a2a4e",
         aiBubbleColor: "#12121f", userBubbleColor: "#1a1a2e",
-        bubbleBorderColor: "#ff00ff", bgGradientColor: "#0f0f1a"
+        bubbleBorderColor: "#ff00ff", bgGradientColor: "#0f0f1a",
+        imageBorderColor: "#00ffff"
     }
 };
 
@@ -1077,7 +1090,8 @@ function getImageStyle() {
     // 그림자 스타일
     const shadowStyle = getImageShadowStyle();
 
-    return `max-width: ${settings.imageMaxWidth}px; height: auto; border-radius: ${settings.imageBorderRadius}px; ${borderStyle} ${shadowStyle}`;
+    // max-width: min(설정값, 100%)로 컨테이너를 넘지 않도록
+    return `max-width: min(${settings.imageMaxWidth}px, 100%); height: auto; border-radius: ${settings.imageBorderRadius}px; ${borderStyle} ${shadowStyle}`;
 }
 
 // 이미지 HTML 생성 (래퍼 div 포함)
@@ -1229,22 +1243,30 @@ function generateHTML() {
         const headerTextAlign = settings.headerAlign;
         const justifyContent = headerTextAlign === 'center' ? 'center' : headerTextAlign === 'right' ? 'flex-end' : 'flex-start';
 
-        // 캐릭터 이름 (상단 뱃지)
+        // 캐릭터 이름 처리 (로그 제목 유무에 따라 다르게 표시)
         let charBadgeHTML = "";
-        if (settings.charName) {
-            const charBadgeStyle = `display: inline-block; padding: 6px 14px; background: ${settings.charColor}; color: ${getContrastTextColor(settings.charColor)}; border-radius: ${settings.badgeRadius}px; font-size: 0.8em; font-weight: 700; letter-spacing: 0.02em;`;
-            if (settings.charLink) {
-                charBadgeHTML = `    <div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><a href="${settings.charLink}" target="_blank" style="text-decoration: none;"><span style="${charBadgeStyle}">${settings.charName}</span></a></div>\n`;
-            } else {
-                charBadgeHTML = `    <div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><span style="${charBadgeStyle}">${settings.charName}</span></div>\n`;
-            }
-        }
-
-        // 로그 제목 (크게 중앙)
         let logTitleHTML = "";
+
         if (settings.logTitle) {
+            // 로그 제목이 있으면: 캐릭터 이름은 뱃지, 로그 제목은 크게
+            if (settings.charName) {
+                const charBadgeStyle = `display: inline-block; padding: 6px 14px; background: ${settings.charColor}; color: ${getContrastTextColor(settings.charColor)}; border-radius: ${settings.badgeRadius}px; font-size: 0.8em; font-weight: 700; letter-spacing: 0.02em;`;
+                if (settings.charLink) {
+                    charBadgeHTML = `    <div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><a href="${settings.charLink}" target="_blank" style="text-decoration: none;"><span style="${charBadgeStyle}">${settings.charName}</span></a></div>\n`;
+                } else {
+                    charBadgeHTML = `    <div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><span style="${charBadgeStyle}">${settings.charName}</span></div>\n`;
+                }
+            }
             const logTitleStyle = `margin: 0; font-size: ${settings.logTitleSize}em; font-weight: 800; color: ${settings.textColor}; letter-spacing: -0.02em; text-align: ${headerTextAlign};`;
             logTitleHTML = `    <p style="${logTitleStyle}">${settings.logTitle}</p>\n`;
+        } else if (settings.charName) {
+            // 로그 제목이 없으면: 캐릭터 이름을 제목처럼 크게 표시
+            const charTitleStyle = `margin: 0; font-size: ${settings.logTitleSize}em; font-weight: 800; color: ${settings.charColor}; letter-spacing: -0.02em; text-align: ${headerTextAlign};`;
+            if (settings.charLink) {
+                logTitleHTML = `    <a href="${settings.charLink}" target="_blank" style="text-decoration: none;"><p style="${charTitleStyle}">${settings.charName}</p></a>\n`;
+            } else {
+                logTitleHTML = `    <p style="${charTitleStyle}">${settings.charName}</p>\n`;
+            }
         }
 
         // 태그들 (모델, 프롬프트, 보조)
@@ -1265,7 +1287,10 @@ function generateHTML() {
 
         if (tags.length > 0) {
             const marginTop = (settings.logTitle || settings.charName) ? "margin-top: 1em;" : "";
-            tagsHTML = `    <div style="${marginTop} display: flex; flex-wrap: wrap; justify-content: ${justifyContent};">${tags.join("")}</div>\n`;
+            // 배지만 있을 때 아래 여백 제거
+            const badgeMargin = (settings.logTitle || settings.charName) ? "margin: 0 8px 8px 0;" : "margin: 0 8px 0 0;";
+            const tagsWithFixedMargin = tags.map(tag => tag.replace(/margin: 0 8px 8px 0;/g, badgeMargin));
+            tagsHTML = `    <div style="${marginTop} display: flex; flex-wrap: wrap; justify-content: ${justifyContent};">${tagsWithFixedMargin.join("")}</div>\n`;
         }
 
         headerHTML = `  <div style="${headerStyle}">\n${charBadgeHTML}${logTitleHTML}${tagsHTML}  </div>\n`;
@@ -1433,21 +1458,29 @@ function updatePreview() {
             const headerTextAlign = settings.headerAlign;
             const justifyContent = headerTextAlign === 'center' ? 'center' : headerTextAlign === 'right' ? 'flex-end' : 'flex-start';
 
-            // 캐릭터 이름 (상단 뼉지)
+            // 캐릭터 이름 처리 (로그 제목 유무에 따라 다르게 표시)
             let charBadgeHTML = "";
-            if (settings.charName) {
-                const charBadgeStyle = `display: inline-block; padding: 6px 14px; background: ${settings.charColor}; color: ${getContrastTextColor(settings.charColor)}; border-radius: ${settings.badgeRadius}px; font-size: 0.8em; font-weight: 700; letter-spacing: 0.02em;`;
-                if (settings.charLink) {
-                    charBadgeHTML = `<div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><a href="${settings.charLink}" target="_blank" style="text-decoration: none;"><span style="${charBadgeStyle}">${settings.charName}</span></a></div>`;
-                } else {
-                    charBadgeHTML = `<div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><span style="${charBadgeStyle}">${settings.charName}</span></div>`;
-                }
-            }
-
-            // 로그 제목 (크게 중앙)
             let logTitleHTML = "";
+
             if (settings.logTitle) {
+                // 로그 제목이 있으면: 캐릭터 이름은 뱃지, 로그 제목은 크게
+                if (settings.charName) {
+                    const charBadgeStyle = `display: inline-block; padding: 6px 14px; background: ${settings.charColor}; color: ${getContrastTextColor(settings.charColor)}; border-radius: ${settings.badgeRadius}px; font-size: 0.8em; font-weight: 700; letter-spacing: 0.02em;`;
+                    if (settings.charLink) {
+                        charBadgeHTML = `<div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><a href="${settings.charLink}" target="_blank" style="text-decoration: none;"><span style="${charBadgeStyle}">${settings.charName}</span></a></div>`;
+                    } else {
+                        charBadgeHTML = `<div style="display: flex; justify-content: ${justifyContent}; margin-bottom: 0.75em;"><span style="${charBadgeStyle}">${settings.charName}</span></div>`;
+                    }
+                }
                 logTitleHTML = `<p style="margin: 0; font-size: ${settings.logTitleSize}em; font-weight: 800; color: ${settings.textColor}; letter-spacing: -0.02em; text-align: ${headerTextAlign};">${settings.logTitle}</p>`;
+            } else if (settings.charName) {
+                // 로그 제목이 없으면: 캐릭터 이름을 제목처럼 크게 표시
+                const charTitleStyle = `margin: 0; font-size: ${settings.logTitleSize}em; font-weight: 800; color: ${settings.charColor}; letter-spacing: -0.02em; text-align: ${headerTextAlign};`;
+                if (settings.charLink) {
+                    logTitleHTML = `<a href="${settings.charLink}" target="_blank" style="text-decoration: none;"><p style="${charTitleStyle}">${settings.charName}</p></a>`;
+                } else {
+                    logTitleHTML = `<p style="${charTitleStyle}">${settings.charName}</p>`;
+                }
             }
 
             // 태그들 (모델, 프롬프트, 보조모델)
@@ -1467,7 +1500,10 @@ function updatePreview() {
 
             if (tags.length > 0) {
                 const marginTop = (settings.logTitle || settings.charName) ? "margin-top: 1em;" : "";
-                tagsHTML = `<div style="${marginTop} display: flex; flex-wrap: wrap; justify-content: ${justifyContent};">${tags.join("")}</div>`;
+                // 배지만 있을 때 아래 여백 제거
+                const badgeMargin = (settings.logTitle || settings.charName) ? "margin: 0 8px 8px 0;" : "margin: 0 8px 0 0;";
+                const tagsWithFixedMargin = tags.map(tag => tag.replace(/margin: 0 8px 8px 0;/g, badgeMargin));
+                tagsHTML = `<div style="${marginTop} display: flex; flex-wrap: wrap; justify-content: ${justifyContent};">${tagsWithFixedMargin.join("")}</div>`;
             }
 
             headerHTML = `<div style="margin-bottom: 1.5em; padding: 1.5em; background: linear-gradient(135deg, ${headerBgLight} 0%, ${headerBgDark} 100%); border-radius: 16px; border: 1px solid ${borderColor}40;">${charBadgeHTML}${logTitleHTML}${tagsHTML}</div>`;
@@ -1642,6 +1678,7 @@ function syncUIFromSettings() {
         "style-border-color": "borderColor",
         "style-gradient-color": "bgGradientColor",
         "style-bubble-border-color": "bubbleBorderColor",
+        "style-image-border-color": "imageBorderColor",
     };
 
     Object.entries(colorMap).forEach(([id, key]) => {
