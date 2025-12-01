@@ -259,10 +259,10 @@ async function handlePasteWithImages(e, blockId) {
 // HTML 내 이미지 처리 (외부 URL -> base64, 압축)
 async function processHtmlWithImages(html) {
     console.log('[붙여넣기] HTML 원본:', html);
-    
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    
+
     // 파싱된 HTML에서 img 태그 확인
     const allImages = doc.querySelectorAll('img');
     console.log('[붙여넣기] 감지된 img 태그 수:', allImages.length);
