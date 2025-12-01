@@ -3284,7 +3284,7 @@ function createFindReplaceModal() {
     modal.querySelectorAll('.preset-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const presetName = btn.dataset.preset;
-            
+
             if (presetName && specialPresets[presetName]) {
                 // 특수 프리셋 처리
                 const preset = specialPresets[presetName];
@@ -3297,7 +3297,7 @@ function createFindReplaceModal() {
                 document.getElementById('replace-input').value = btn.dataset.replace || '';
                 document.getElementById('find-regex').checked = btn.dataset.regex === 'true';
             }
-            
+
             document.getElementById('find-replace-result').textContent = '';
         });
     });
