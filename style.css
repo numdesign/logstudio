@@ -268,7 +268,8 @@ body,
     max-height: calc(50vh - 4rem);
     overflow-y: auto;
     overflow-x: visible;
-    padding-right: 0.5rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
 }
 
 .settings-content:not(.active) {
@@ -1529,12 +1530,13 @@ body.theme-dark .thumb-icon--moon {
 
     .log-tab-actions {
         width: 100%;
-        justify-content: flex-start;
+        justify-content: space-between;
     }
 
     .log-action-btn {
         padding: 0.5rem 0.75rem;
         font-size: 0.75rem;
+        flex: 1;
     }
 
     .theme-preset-wrap {
@@ -1573,16 +1575,72 @@ body.theme-dark .thumb-icon--moon {
         height: 28px;
     }
 
+    /* 로그 블록 헤더 모바일 최적화 */
+    .log-block-header {
+        padding: 0.375rem 0.5rem;
+        gap: 0.375rem;
+    }
+
+    .log-block-title {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
     .log-block-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 1rem;
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+    }
+
+    .log-block-actions {
+        flex-wrap: nowrap;
     }
 
     .log-block-textarea {
         font-size: 16px;
         /* iOS 확대 방지 */
         min-height: 100px;
+    }
+
+    /* 디자인 탭 색상 그리드 - 모바일에서 2열 */
+    #tab-design .setting-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    #tab-design .setting-row .setting-group {
+        flex: none;
+    }
+
+    /* 단일 항목 행은 1열로 */
+    #tab-design .setting-row:has(.setting-group:only-child) {
+        grid-template-columns: 1fr;
+    }
+
+    #tab-design .color-input-wrap {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    #tab-design .setting-color {
+        width: 100%;
+        height: 36px;
+    }
+
+    #tab-design .setting-input--color {
+        display: none;
+        /* 모바일에서 텍스트 입력 숨김 */
+    }
+
+    #tab-design .setting-label {
+        font-size: 0.65rem;
+        margin-bottom: 0.25rem;
+    }
+
+    /* 미리보기 모드 토글 숨기기 */
+    .preview-mode-toggle {
+        display: none;
     }
 
     .add-block-btn {
@@ -2158,4 +2216,151 @@ body.theme-dark .style-accordion-header:hover {
 
 .find-replace-btn--primary:hover {
     background: var(--accent-dark);
+}
+
+/* ===== 모바일 반응형 추가 ===== */
+
+/* 모달 모바일 최적화 */
+@media (max-width: 600px) {
+
+    /* 찾기/바꾸기 모달 */
+    .find-replace-content {
+        width: 95%;
+        max-width: none;
+        margin: 1rem;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .find-replace-header {
+        padding: 1rem;
+        position: sticky;
+        top: 0;
+        background: var(--bg-elevated);
+        z-index: 1;
+    }
+
+    .find-replace-body {
+        padding: 1rem;
+    }
+
+    .find-replace-input {
+        font-size: 16px;
+        /* iOS 확대 방지 */
+    }
+
+    .find-replace-presets {
+        flex-wrap: wrap;
+    }
+
+    .find-replace-actions {
+        flex-wrap: wrap;
+    }
+
+    .find-replace-btn {
+        flex: 1;
+        min-width: 80px;
+        padding: 0.75rem;
+    }
+
+    /* 도움말 모달 */
+    .help-modal-content {
+        width: 95%;
+        max-width: none;
+        margin: 1rem;
+        max-height: 85vh;
+    }
+
+    .help-modal-body {
+        padding: 1rem;
+    }
+
+    .help-shortcut-list {
+        font-size: 0.8rem;
+    }
+
+    /* 설정 모달 */
+    .settings-modal-content {
+        width: 95%;
+        max-width: none;
+        margin: 1rem;
+        max-height: 85vh;
+    }
+}
+
+/* 터치 친화적 인터랙션 */
+@media (hover: none) and (pointer: coarse) {
+
+    /* 터치 기기에서 호버 효과 제거 (의도치 않은 상태 유지 방지) */
+    .log-block-btn:hover,
+    .settings-tab:hover,
+    .theme-preset:hover,
+    .preset-btn:hover {
+        transform: none;
+    }
+
+    /* 터치 타겟 최소 크기 보장 (44px) */
+    .log-block-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .settings-tab {
+        min-height: 44px;
+    }
+
+    .toggle-switch {
+        min-width: 50px;
+        min-height: 30px;
+    }
+
+    /* 스크롤바 숨기기 (모바일) */
+    .settings-content::-webkit-scrollbar,
+    .code-output::-webkit-scrollbar {
+        display: none;
+    }
+
+    .settings-content,
+    .code-output {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
+
+/* 가로 모드 (landscape) 최적화 */
+@media (max-height: 500px) and (orientation: landscape) {
+    .hero {
+        padding: 0.5rem 1rem;
+    }
+
+    .hero-title {
+        font-size: 1.25rem;
+    }
+
+    .hero-desc {
+        display: none;
+    }
+
+    .app-layout {
+        padding: 0 0.5rem 0.5rem;
+    }
+
+    .pane {
+        max-height: 60vh;
+    }
+}
+
+/* iOS Safari 하단 바 대응 */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .app {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .toast-message {
+        bottom: calc(2rem + env(safe-area-inset-bottom));
+    }
+
+    #mobile-debug-log {
+        padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    }
 }

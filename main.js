@@ -5,6 +5,23 @@ const copyBtn = document.querySelector("#copy-btn");
 const logBlocksContainer = document.querySelector("#log-blocks");
 const addBlockBtn = document.querySelector("#add-block-btn");
 
+// ===== 모바일 디버그 로그 (테스트용) =====
+const MOBILE_DEBUG = false; // 테스트 후 false로 변경
+function mobileLog(...args) {
+    console.log(...args);
+    if (MOBILE_DEBUG) {
+        let debugEl = document.getElementById('mobile-debug-log');
+        if (!debugEl) {
+            debugEl = document.createElement('div');
+            debugEl.id = 'mobile-debug-log';
+            debugEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:200px;overflow-y:auto;background:rgba(0,0,0,0.9);color:#0f0;font-size:12px;font-family:monospace;padding:8px;z-index:99999;white-space:pre-wrap;word-break:break-all;';
+            document.body.appendChild(debugEl);
+        }
+        debugEl.textContent += args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ') + '\n';
+        debugEl.scrollTop = debugEl.scrollHeight;
+    }
+}
+
 // ===== LocalStorage 키 =====
 const STORAGE_KEYS = {
     SETTINGS: "loggen_settings",
@@ -285,16 +302,16 @@ async function handlePasteWithImages(e, blockId) {
 
 // HTML 내 이미지 처리 (외부 URL -> base64, 압축)
 async function processHtmlWithImages(html) {
-    console.log('[붙여넣기] HTML 원본:', html);
+    mobileLog('[붙여넣기] HTML 길이:', html.length);
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
     // 파싱된 HTML에서 img 태그 확인
     const allImages = doc.querySelectorAll('img');
-    console.log('[붙여넣기] 감지된 img 태그 수:', allImages.length);
+    mobileLog('[붙여넣기] 감지된 img 태그 수:', allImages.length);
     allImages.forEach((img, i) => {
-        console.log(`[붙여넣기] img[${i}] src:`, img.src, 'getAttribute:', img.getAttribute('src'));
+        mobileLog(`[img ${i}] src:`, img.src.substring(0, 80) + '...');
     });
 
     // ===== HTML Sanitize: 텍스트와 이미지만 추출 =====
@@ -373,11 +390,11 @@ async function processHtmlWithImages(html) {
         let base64 = null;
 
         // 디버깅: 이미지 src 확인
-        console.log(`[이미지 ${i}] src:`, imgSrc);
+        mobileLog(`[이미지 ${i}] 원본:`, imgSrc.substring(0, 60) + '...');
 
         // risuai.xyz/sw/img/ URL을 실제 이미지 URL로 변환
         imgSrc = convertRisuaiUrl(imgSrc);
-        console.log(`[이미지 ${i}] 변환 후 src:`, imgSrc);
+        mobileLog(`[이미지 ${i}] 변환:`, imgSrc.substring(0, 60) + '...');
 
         try {
             if (!imgSrc || imgSrc.trim() === '') {
@@ -393,27 +410,25 @@ async function processHtmlWithImages(html) {
                     console.warn('Blob fetch 실패:', err);
                 }
             } else if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) {
-                console.log(`[이미지 ${i}] https fetch 시도...`);
+                mobileLog(`[이미지 ${i}] fetch 시도...`);
                 try {
                     const response = await fetch(imgSrc);
-                    console.log(`[이미지 ${i}] fetch 응답:`, response.status, response.ok);
+                    mobileLog(`[이미지 ${i}] 응답:`, response.status, response.ok);
                     const blob = await response.blob();
-                    console.log(`[이미지 ${i}] blob 생성 완료:`, blob.type, blob.size);
+                    mobileLog(`[이미지 ${i}] blob:`, blob.type, blob.size);
 
                     // blob.type이 이미지가 아니면 Canvas 방식으로 시도
                     if (blob.type && blob.type.startsWith('image/')) {
                         base64 = await blobToBase64(blob);
-                        console.log(`[이미지 ${i}] base64 변환 완료, 길이:`, base64?.length);
+                        mobileLog(`[이미지 ${i}] base64 성공, 길이:`, base64?.length);
                     } else {
-                        console.warn(`[이미지 ${i}] blob이 이미지가 아님 (${blob.type}), Canvas 시도...`);
+                        mobileLog(`[이미지 ${i}] blob이 이미지 아님! (${blob.type})`);
                         base64 = await tryLoadImageViaCanvas(imgSrc);
                     }
                 } catch (err) {
-                    console.warn(`[이미지 ${i}] 외부 이미지 fetch 실패:`, err);
-                    // fetch 실패 시 Canvas 방식 시도
-                    console.log(`[이미지 ${i}] Canvas 방식 시도...`);
+                    mobileLog(`[이미지 ${i}] fetch 실패:`, err.message);
                     base64 = await tryLoadImageViaCanvas(imgSrc);
-                    console.log(`[이미지 ${i}] Canvas 결과:`, base64 ? '성공' : '실패');
+                    mobileLog(`[이미지 ${i}] Canvas:`, base64 ? '성공' : '실패');
                 }
             } else if (imgSrc.startsWith('//')) {
                 // 프로토콜 없는 URL (//cdn.example.com/...)
@@ -2305,11 +2320,18 @@ outputTabBtns.forEach((btn) => {
         const content = document.querySelector(`#output-${tabId}`);
         if (content) content.classList.add("active");
 
-        // 탭에 따라 버튼 표시/숨김
+        // 탭에 따라 버튼 표시/숨김 (모바일에서는 항상 숨김)
         if (tabId === "code") {
             if (previewModeContainer) previewModeContainer.style.display = "none";
         } else {
-            if (previewModeContainer) previewModeContainer.style.display = "flex";
+            // 모바일(600px 이하)에서는 토글 숨김 유지
+            if (previewModeContainer) {
+                if (window.innerWidth <= 600) {
+                    previewModeContainer.style.display = "none";
+                } else {
+                    previewModeContainer.style.display = "flex";
+                }
+            }
         }
     });
 });
