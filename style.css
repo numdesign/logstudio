@@ -93,6 +93,30 @@ body,
     background-clip: text;
 }
 
+/* Studio 링크 스타일 */
+.studio-link {
+    text-decoration: none;
+    -webkit-text-fill-color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.studio-link:hover {
+    -webkit-text-fill-color: var(--accent);
+}
+
+.studio-link.active {
+    -webkit-text-fill-color: var(--text);
+}
+
+.studio-divider {
+    -webkit-text-fill-color: var(--text-muted);
+    margin: 0 0.1em;
+}
+
+.studio-suffix {
+    -webkit-text-fill-color: var(--text);
+}
+
 .hero-desc {
     margin: 0.75rem 0 0;
     font-size: 1.0625rem;

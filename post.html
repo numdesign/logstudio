@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Post Studio</title>
+
+    <!-- Pretendard 웹폰트 -->
+    <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="post.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+</head>
+
+<body>
+    <div class="app">
+        <!-- 테마 토글 (우상단 고정) -->
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="테마 전환">
+            <span class="toggle-track">
+                <span class="toggle-thumb">
+                    <span class="thumb-icon thumb-icon--sun">☀️</span>
+                    <span class="thumb-icon thumb-icon--moon">🌙</span>
+                </span>
+            </span>
+        </button>
+
+        <!-- 도움말 버튼 -->
+        <button id="help-btn" class="help-btn" type="button" aria-label="도움말" title="도움말 (F1)">?</button>
+
+        <!-- 히어로 섹션 -->
+        <header class="hero">
+            <h1 class="hero-title">
+                <a href="index.html" class="studio-link">Log</a>
+                <span class="studio-divider">/</span>
+                <a href="post.html" class="studio-link active">Post</a>
+                <span class="studio-suffix">Studio</span>
+            </h1>
+            <p class="hero-desc">게시글을 예쁘게 꾸며보세요</p>
+        </header>
+
+        <!-- 메인 에디터 영역 -->
+        <main class="app-layout app-layout--post">
+            <!-- 왼쪽: 툴바 패널 -->
+            <div class="column column--left">
+                <section class="pane pane--toolbar pane--unified">
+                    <div class="pane-header">
+                        <span class="pane-label">도구</span>
+                    </div>
+
+                    <!-- 세로 툴바 -->
+                    <div class="toolbar-vertical">
+                        <!-- 글씨 스타일 -->
+                        <div class="toolbar-section">
+                            <span class="toolbar-section-label">글씨</span>
+                            <div class="toolbar-section-buttons">
+                                <button type="button" class="toolbar-btn" data-command="bold" title="굵게 (Ctrl+B)">
+                                    <strong>B</strong>
+                                </button>
+                                <button type="button" class="toolbar-btn" data-command="italic" title="기울임 (Ctrl+I)">
+                                    <em>I</em>
+                                </button>
+                                <button type="button" class="toolbar-btn" data-command="underline" title="밑줄 (Ctrl+U)">
+                                    <u>U</u>
+                                </button>
+                                <button type="button" class="toolbar-btn" data-command="strikeThrough" title="취소선">
+                                    <s>S</s>
+                                </button>
+                            </div>
+                            <div class="toolbar-section-row">
+                                <select class="toolbar-select toolbar-select--full" id="font-size-select" title="글자 크기">
+                                    <option value="">글자 크기</option>
+                                    <option value="1">아주 작게</option>
+                                    <option value="2">작게</option>
+                                    <option value="3">보통</option>
+                                    <option value="4">크게</option>
+                                    <option value="5">아주 크게</option>
+                                    <option value="6">매우 크게</option>
+                                    <option value="7">최대</option>
+                                </select>
+                            </div>
+                            <div class="toolbar-section-row">
+                                <label class="toolbar-color-full" title="글자색">
+                                    <span class="color-label-text">A</span>
+                                    <span class="color-label-bar" id="text-color-bar"
+                                        style="background: #000000;"></span>
+                                    <input type="color" id="text-color-picker" value="#000000">
+                                </label>
+                                <label class="toolbar-color-full" title="배경색 (형광펜)">
+                                    <span class="color-label-text"
+                                        style="background: #ffff00; padding: 0 4px; border-radius: 2px;">A</span>
+                                    <span class="color-label-bar" id="bg-color-bar" style="background: #ffff00;"></span>
+                                    <input type="color" id="bg-color-picker" value="#ffff00">
+                                </label>
+                            </div>
+                            <div class="toolbar-section-row">
+                                <button type="button" class="toolbar-btn toolbar-btn--full" id="text-gradient-btn"
+                                    title="텍스트 그라데이션">
+                                    🌈 그라데이션
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 제목/문단 -->
+                        <div class="toolbar-section">
+                            <span class="toolbar-section-label">제목</span>
+                            <div class="toolbar-section-buttons">
+                                <button type="button" class="toolbar-btn" data-command="heading1"
+                                    title="제목 1">H1</button>
+                                <button type="button" class="toolbar-btn" data-command="heading2"
+                                    title="제목 2">H2</button>
+                                <button type="button" class="toolbar-btn" data-command="heading3"
+                                    title="제목 3">H3</button>
+                                <button type="button" class="toolbar-btn" data-command="formatBlock-p"
+                                    title="본문">P</button>
+                            </div>
+                        </div>
+
+                        <!-- 정렬 -->
+                        <div class="toolbar-section">
+                            <span class="toolbar-section-label">정렬</span>
+                            <div class="toolbar-section-buttons">
+                                <button type="button" class="toolbar-btn" data-command="justifyLeft"
+                                    title="왼쪽 정렬">◧</button>
+                                <button type="button" class="toolbar-btn" data-command="justifyCenter"
+                                    title="가운데 정렬">◫</button>
+                                <button type="button" class="toolbar-btn" data-command="justifyRight"
+                                    title="오른쪽 정렬">◨</button>
+                            </div>
+                        </div>
+
+                        <!-- 목록/인용 -->
+                        <div class="toolbar-section">
+                            <span class="toolbar-section-label">목록</span>
+                            <div class="toolbar-section-buttons">
+                                <button type="button" class="toolbar-btn" data-command="insertUnorderedList"
+                                    title="글머리 기호">•≡</button>
+                                <button type="button" class="toolbar-btn" data-command="insertOrderedList"
+                                    title="번호 매기기">1.</button>
+                                <button type="button" class="toolbar-btn" data-command="blockquote"
+                                    title="인용구">❝</button>
+                            </div>
+                        </div>
+
+                        <!-- 삽입 -->
+                        <div class="toolbar-section">
+                            <span class="toolbar-section-label">삽입</span>
+                            <div class="toolbar-section-buttons">
+                                <button type="button" class="toolbar-btn" id="insert-block-btn"
+                                    title="블록 삽입">📦</button>
+                                <button type="button" class="toolbar-btn" id="insert-details-btn"
+                                    title="접기/펼치기 삽입">📂</button>
+                                <button type="button" class="toolbar-btn" id="insert-image-btn"
+                                    title="이미지 삽입">🖼️</button>
+                                <button type="button" class="toolbar-btn" id="insert-link-btn" title="링크 삽입">🔗</button>
+                            </div>
+                            <div class="toolbar-section-buttons">
+                                <button type="button" class="toolbar-btn" id="insert-table-btn" title="표 삽입">▦</button>
+                                <button type="button" class="toolbar-btn" id="insert-hr-btn" title="구분선 삽입">―</button>
+                            </div>
+                        </div>
+
+                        <!-- 액션 버튼들 -->
+                        <div class="toolbar-section toolbar-section--actions">
+                            <button type="button" class="toolbar-action-btn toolbar-action-btn--primary"
+                                id="copy-html-btn" title="HTML 복사">📋 복사</button>
+                            <button type="button" class="toolbar-action-btn" id="view-code-btn"
+                                title="HTML 보기">&lt;/&gt; HTML</button>
+                            <button type="button" class="toolbar-action-btn toolbar-action-btn--danger" id="clear-btn"
+                                title="전체 삭제">🗑️ 초기화</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 오른쪽: 에디터 캔버스 -->
+            <div class="column column--right">
+                <section class="pane pane--canvas pane--unified">
+                    <div class="pane-header">
+                        <span class="pane-label">에디터</span>
+                        <div class="canvas-controls">
+                            <label class="bg-mode-toggle" title="배경 모드 전환">
+                                <span class="bg-mode-icon">🔲</span>
+                                <input type="checkbox" id="bg-mode-toggle">
+                                <span class="bg-mode-slider"></span>
+                                <span class="bg-mode-icon">⬜</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 에디터 캔버스 (체크무늬 배경) -->
+                    <div class="editor-canvas" id="editor-canvas">
+                        <div class="editor-content" id="editor" contenteditable="true"
+                            data-placeholder="📦 블록이나 📂 접기를 삽입해서 작업을 시작하세요"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- HTML 코드 보기 (숨김) -->
+            <div class="code-view-container" id="code-view-container" style="display: none;">
+                <div class="code-view-header">
+                    <span>HTML 코드</span>
+                    <button type="button" class="code-view-close" id="code-view-close">✕</button>
+                </div>
+                <pre class="code-view-content" id="code-view-content"></pre>
+            </div>
+        </main>
+    </div>
+
+    <!-- 이미지 삽입 모달 -->
+    <div class="modal" id="image-modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>이미지 삽입</h3>
+                <button type="button" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="image-upload-area" id="image-upload-area">
+                    <div class="upload-icon">🖼️</div>
+                    <p>이미지를 드래그하거나 클릭하여 업로드</p>
+                    <input type="file" id="image-file-input" accept="image/*" style="display: none;">
+                </div>
+                <div class="image-url-input">
+                    <label>또는 URL 입력:</label>
+                    <input type="text" id="image-url-input" placeholder="https://...">
+                </div>
+                <div class="image-options">
+                    <label>
+                        <span>너비:</span>
+                        <input type="number" id="image-width" placeholder="자동" min="50" max="1000">
+                        <span>px</span>
+                    </label>
+                    <label>
+                        <span>정렬:</span>
+                        <select id="image-align">
+                            <option value="none">기본</option>
+                            <option value="center">가운데</option>
+                            <option value="left">왼쪽</option>
+                            <option value="right">오른쪽</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn--secondary" id="image-cancel-btn">취소</button>
+                <button type="button" class="modal-btn modal-btn--primary" id="image-insert-btn">삽입</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 링크 삽입 모달 -->
+    <div class="modal" id="link-modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>링크 삽입</h3>
+                <button type="button" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="link-input-group">
+                    <label>링크 텍스트:</label>
+                    <input type="text" id="link-text-input" placeholder="표시할 텍스트">
+                </div>
+                <div class="link-input-group">
+                    <label>URL:</label>
+                    <input type="text" id="link-url-input" placeholder="https://...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn--secondary" id="link-cancel-btn">취소</button>
+                <button type="button" class="modal-btn modal-btn--primary" id="link-insert-btn">삽입</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 토스트 메시지 -->
+    <div class="toast-message" id="toast"></div>
+
+    <!-- 도움말 모달 -->
+    <div class="help-modal" id="help-modal">
+        <div class="help-modal-backdrop"></div>
+        <div class="help-modal-content">
+            <div class="help-modal-header">
+                <h2>Post Studio 도움말</h2>
+                <button type="button" class="help-modal-close" id="help-modal-close">✕</button>
+            </div>
+            <div class="help-modal-body">
+                <div class="shortcut-group">
+                    <h3>텍스트 서식</h3>
+                    <div class="shortcut-item">
+                        <span class="shortcut-desc">굵게</span>
+                        <span class="shortcut-key">Ctrl + B</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-desc">기울임</span>
+                        <span class="shortcut-key">Ctrl + I</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-desc">밑줄</span>
+                        <span class="shortcut-key">Ctrl + U</span>
+                    </div>
+                </div>
+                <div class="shortcut-group">
+                    <h3>블록 편집</h3>
+                    <p class="shortcut-tip">편집 가능한 블록(회색 박스)이나 '접기(화살표)' 요소를 <strong>더블클릭</strong>하면 스타일 편집 툴바가 나타납니다.
+                    </p>
+                    <p class="shortcut-tip">툴바에서 배경색, 그라데이션, 외곽선, 여백, 둥글기, 배경 이미지 등을 조절할 수 있습니다.</p>
+                </div>
+                <div class="shortcut-group">
+                    <h3>블록 이동</h3>
+                    <p class="shortcut-tip">블록을 <strong>0.5초간 꾹 누르면</strong> 드래그 모드가 활성화됩니다. 원하는 위치로 이동 후 마우스를 놓으면 블록이
+                        이동합니다.</p>
+                </div>
+                <div class="shortcut-group">
+                    <h3>이미지 삽입</h3>
+                    <p class="shortcut-tip">에디터 영역에 이미지를 직접 <strong>붙여넣기(Ctrl+V)</strong> 하거나 <strong>드래그 앤
+                            드롭</strong>하여 삽입할 수 있습니다.</p>
+                </div>
+                <div class="shortcut-group">
+                    <h3>기타</h3>
+                    <div class="shortcut-item">
+                        <span class="shortcut-desc">모달/패널 닫기</span>
+                        <span class="shortcut-key">Escape</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-desc">도움말 열기</span>
+                        <span class="shortcut-key">F1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 요소 편집 플로팅 툴바 -->
+    <div class="element-toolbar" id="element-toolbar">
+        <!-- Details 전용 탭 (details 선택 시에만 표시) -->
+        <div class="etb-tabs" id="etb-tabs" style="display: none;">
+            <button type="button" class="etb-tab active" data-tab="container">📦 컨테이너</button>
+            <button type="button" class="etb-tab" data-tab="inner">📄 내부</button>
+        </div>
+        <div class="element-toolbar-row">
+            <!-- 배경색 -->
+            <label class="etb-color" title="배경색">
+                <span class="etb-color-icon">🎨</span>
+                <input type="color" id="etb-bg-color" value="#ffffff">
+            </label>
+            <!-- 그라데이션 -->
+            <button type="button" class="etb-btn" id="etb-gradient-btn" title="배경 그라데이션">🌈</button>
+            <div class="etb-divider"></div>
+            <!-- 외곽선 -->
+            <div class="etb-border-wrap" title="외곽선">
+                <span class="etb-slider-icon">▢</span>
+                <input type="number" class="etb-border-width" id="etb-border-width" min="0" max="10" value="0"
+                    title="외곽선 두께 (px)">
+                <select class="etb-border-style" id="etb-border-style" title="외곽선 스타일">
+                    <option value="solid">실선</option>
+                    <option value="dashed">점선</option>
+                    <option value="dotted">원점</option>
+                    <option value="double">이중선</option>
+                </select>
+                <input type="color" id="etb-border-color" value="#cccccc" title="외곽선 색상">
+            </div>
+            <div class="etb-divider"></div>
+            <!-- 패딩 슬라이더 -->
+            <div class="etb-slider-wrap" title="패딩">
+                <span class="etb-slider-icon">⬚</span>
+                <input type="range" class="etb-slider" id="etb-padding" min="0" max="48" value="12">
+                <span class="etb-slider-value" id="etb-padding-value">0.75</span>
+            </div>
+            <div class="etb-divider"></div>
+            <!-- 둥글기 슬라이더 -->
+            <div class="etb-slider-wrap" title="둥글기">
+                <span class="etb-slider-icon">◐</span>
+                <input type="range" class="etb-slider" id="etb-radius" min="0" max="32" value="8">
+                <span class="etb-slider-value" id="etb-radius-value">0.50</span>
+            </div>
+            <div class="etb-divider"></div>
+            <!-- 배경 이미지 -->
+            <button type="button" class="etb-btn" id="etb-bg-image-btn" title="배경 이미지">🖼️</button>
+            <!-- 삭제 -->
+            <button type="button" class="etb-btn etb-btn--danger" id="etb-delete-btn" title="요소 삭제">🗑️</button>
+        </div>
+    </div>
+
+    <!-- 배경 이미지 팝오버 -->
+    <div class="etb-popover" id="etb-bg-image-popover">
+        <div class="etb-popover-content">
+            <label class="etb-popover-label">배경 이미지 URL</label>
+            <input type="text" class="etb-popover-input" id="etb-bg-image-url" placeholder="https://...">
+            <label class="etb-popover-label">크기</label>
+            <select class="etb-popover-select" id="etb-bg-size">
+                <option value="cover">꽉 채우기 (cover)</option>
+                <option value="contain">맞추기 (contain)</option>
+                <option value="auto">원본 크기</option>
+            </select>
+            <div class="etb-popover-actions">
+                <button type="button" class="etb-popover-btn" id="etb-bg-image-clear">제거</button>
+                <button type="button" class="etb-popover-btn etb-popover-btn--primary"
+                    id="etb-bg-image-apply">적용</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 그라데이션 팝오버 -->
+    <div class="etb-popover etb-popover--gradient" id="etb-gradient-popover">
+        <div class="etb-popover-content">
+            <label class="etb-popover-label">그라데이션 방향</label>
+            <select class="etb-popover-select" id="etb-gradient-direction">
+                <option value="to right">→ 오른쪽</option>
+                <option value="to left">← 왼쪽</option>
+                <option value="to bottom">↓ 아래</option>
+                <option value="to top">↑ 위</option>
+                <option value="to bottom right">↘ 오른쪽 아래</option>
+                <option value="to bottom left">↙ 왼쪽 아래</option>
+                <option value="to top right">↗ 오른쪽 위</option>
+                <option value="to top left">↖ 왼쪽 위</option>
+            </select>
+            <label class="etb-popover-label">색상 (최대 5개)</label>
+            <div class="etb-gradient-colors" id="etb-gradient-colors">
+                <div class="etb-gradient-stop">
+                    <input type="color" class="etb-gradient-color" value="#ff6b6b">
+                    <input type="number" class="etb-gradient-pos" value="0" min="0" max="100" title="위치 (%)">
+                    <button type="button" class="etb-gradient-remove" title="삭제">✕</button>
+                </div>
+                <div class="etb-gradient-stop">
+                    <input type="color" class="etb-gradient-color" value="#4ecdc4">
+                    <input type="number" class="etb-gradient-pos" value="100" min="0" max="100" title="위치 (%)">
+                    <button type="button" class="etb-gradient-remove" title="삭제">✕</button>
+                </div>
+            </div>
+            <button type="button" class="etb-popover-btn etb-popover-btn--add" id="etb-gradient-add">+ 색상 추가</button>
+            <div class="etb-gradient-preview" id="etb-gradient-preview"></div>
+            <div class="etb-popover-actions">
+                <button type="button" class="etb-popover-btn" id="etb-gradient-clear">제거</button>
+                <button type="button" class="etb-popover-btn etb-popover-btn--primary"
+                    id="etb-gradient-apply">적용</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 텍스트 그라데이션 팝오버 -->
+    <div class="etb-popover etb-popover--gradient" id="text-gradient-popover">
+        <div class="etb-popover-content">
+            <label class="etb-popover-label">그라데이션 방향</label>
+            <select class="etb-popover-select" id="text-gradient-direction">
+                <option value="to right">→ 오른쪽</option>
+                <option value="to left">← 왼쪽</option>
+                <option value="to bottom">↓ 아래</option>
+                <option value="to top">↑ 위</option>
+                <option value="to bottom right">↘ 오른쪽 아래</option>
+                <option value="to bottom left">↙ 왼쪽 아래</option>
+                <option value="to top right">↗ 오른쪽 위</option>
+                <option value="to top left">↖ 왼쪽 위</option>
+            </select>
+            <label class="etb-popover-label">색상 (최대 5개)</label>
+            <div class="etb-gradient-colors" id="text-gradient-colors">
+                <div class="etb-gradient-stop">
+                    <input type="color" class="etb-gradient-color" value="#ff6b6b">
+                    <input type="number" class="etb-gradient-pos" value="0" min="0" max="100" title="위치 (%)">
+                    <button type="button" class="etb-gradient-remove" title="삭제">✕</button>
+                </div>
+                <div class="etb-gradient-stop">
+                    <input type="color" class="etb-gradient-color" value="#4ecdc4">
+                    <input type="number" class="etb-gradient-pos" value="100" min="0" max="100" title="위치 (%)">
+                    <button type="button" class="etb-gradient-remove" title="삭제">✕</button>
+                </div>
+            </div>
+            <button type="button" class="etb-popover-btn etb-popover-btn--add" id="text-gradient-add">+ 색상 추가</button>
+            <div class="etb-gradient-preview" id="text-gradient-preview"></div>
+            <div class="etb-popover-actions">
+                <button type="button" class="etb-popover-btn etb-popover-btn--primary"
+                    id="text-gradient-apply">적용</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="post.js"></script>
+</body>
+
+</html>
