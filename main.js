@@ -1123,6 +1123,9 @@ const settings = {
     blockTitleMarginBottom: 1,
     blockTitleColor: "#71717a",
     lineHeight: 1.8,
+    // 나레이션/일반 문단 간격 (<p> margin-bottom)
+    // - 기본값 0: 기존 출력과 동일
+    paragraphSpacing: 0,
     // 로그 블록(섹션) 단위 줄 간격
     blockLineHeight: 1.8,
     letterSpacing: 0,
@@ -1889,10 +1892,9 @@ function migrateSettingsFromLoadedObject(loaded) {
     if (!has("blockLineHeight")) settings.blockLineHeight = settings.lineHeight ?? 1.8;
     settings.blockLineHeight = clampNumber(settings.blockLineHeight ?? 1.8, 0.8, 3);
 
-    // 레거시: paragraphSpacing (더 이상 사용하지 않음)
-    if (has("paragraphSpacing")) {
-        delete settings.paragraphSpacing;
-    }
+    // 문단 간격
+    if (!has("paragraphSpacing")) settings.paragraphSpacing = settings.paragraphSpacing ?? 0;
+    settings.paragraphSpacing = clampNumber(settings.paragraphSpacing ?? 0, 0, 5);
 
     // 헤더 배경 (기존: bgColor 기반 자동 그라데이션)
     if (!has("headerBgColor")) {
@@ -2049,8 +2051,8 @@ function parseMarkdown(text) {
 
 // 문단 스타일 생성
 function getParagraphStyle() {
-    // NOTE: margin은 출력 HTML에 포함하지 않음 (line-height 기반으로 간격 제어)
-    return `text-align: ${settings.textAlign}; word-break: keep-all;`;
+    const mb = clampNumber(settings.paragraphSpacing ?? 0, 0, 5);
+    return `margin: 0 0 ${mb}em 0; text-align: ${settings.textAlign}; word-break: keep-all;`;
 }
 
 // HTML 블록 콘텐츠 파싱 (이미지 + 텍스트 혼합 처리)
@@ -3027,6 +3029,7 @@ const rangeInputs = [
     { id: "style-block-title-weight", key: "blockTitleFontWeight", valueId: "style-block-title-weight-value", unit: "" },
     { id: "style-block-title-margin-bottom", key: "blockTitleMarginBottom", valueId: "style-block-title-margin-bottom-value", unit: "em" },
     { id: "style-line-height", key: "lineHeight", valueId: "style-line-height-value", unit: "" },
+    { id: "style-paragraph-spacing", key: "paragraphSpacing", valueId: "style-paragraph-spacing-value", unit: "em" },
     { id: "style-block-line-height", key: "blockLineHeight", valueId: "style-block-line-height-value", unit: "" },
     { id: "style-letter-spacing", key: "letterSpacing", valueId: "style-letter-spacing-value", unit: "em" },
     { id: "style-border-width", key: "borderWidth", valueId: "style-border-width-value", unit: "px" },
@@ -3497,6 +3500,7 @@ function syncAllUIFromSettings() {
         { id: "style-block-title-weight", key: "blockTitleFontWeight", valueId: "style-block-title-weight-value", unit: "" },
         { id: "style-block-title-margin-bottom", key: "blockTitleMarginBottom", valueId: "style-block-title-margin-bottom-value", unit: "em" },
         { id: "style-line-height", key: "lineHeight", valueId: "style-line-height-value", unit: "" },
+        { id: "style-paragraph-spacing", key: "paragraphSpacing", valueId: "style-paragraph-spacing-value", unit: "em" },
         { id: "style-block-line-height", key: "blockLineHeight", valueId: "style-block-line-height-value", unit: "" },
         { id: "style-letter-spacing", key: "letterSpacing", valueId: "style-letter-spacing-value", unit: "em" },
         { id: "style-border-width", key: "borderWidth", valueId: "style-border-width-value", unit: "px" },
