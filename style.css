@@ -784,6 +784,17 @@ body.theme-dark .preview-canvas {
         linear-gradient(-45deg, transparent 75%, #2d2d2d 75%);
 }
 
+/* 컨테이너 사용 안 함: 캔버스 배경은 흰색 단색 고정 */
+.preview-canvas.preview-canvas--plain {
+    background-color: #ffffff;
+    background-image: none;
+}
+
+body.theme-dark .preview-canvas.preview-canvas--plain {
+    background-color: #ffffff;
+    background-image: none;
+}
+
 /* 모바일 미리보기 모드 */
 .preview-canvas.mobile-preview {
     max-width: 400px;

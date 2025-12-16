@@ -1093,6 +1093,11 @@ const settings = {
     fontWeight: 400,
     containerWidth: 800,
     containerPadding: 2,
+    // 출력 옵션
+    // - 헤더 숨기기: 헤더 영역을 아예 생성하지 않음
+    disableHeader: true,
+    // - 컨테이너 사용 안 함: 배경/테두리/둥글기/그림자 미적용 + 미리보기 캔버스 배경 흰색 고정
+    disableContainerStyle: true,
     // 컨테이너 외부 여백(위/아래) - margin으로 적용
     containerOuterMarginY: 0,
     // (레거시 호환) 4방향 외부 여백
@@ -1626,6 +1631,12 @@ function buildBubbleBackgroundCSS(isAi) {
 
 function migrateSettingsFromLoadedObject(loaded) {
     const has = (k) => Object.prototype.hasOwnProperty.call(loaded || {}, k);
+
+    // 출력 옵션
+    if (!has("disableHeader")) settings.disableHeader = Boolean(settings.disableHeader);
+    if (!has("disableContainerStyle")) settings.disableContainerStyle = Boolean(settings.disableContainerStyle);
+    settings.disableHeader = Boolean(settings.disableHeader);
+    settings.disableContainerStyle = Boolean(settings.disableContainerStyle);
 
     // 배경 그라데이션 (방향 문자열 -> 각도/원형)
     if (!has("bgGradientAngle") && has("bgGradientDirection")) {
@@ -2255,7 +2266,7 @@ function generateHTML() {
 
     // 헤더 HTML 생성
     let headerHTML = "";
-    const hasHeader = settings.logTitle || settings.charName || settings.aiModel || settings.promptName || settings.subModel;
+    const hasHeader = !settings.disableHeader && (settings.logTitle || settings.charName || settings.aiModel || settings.promptName || settings.subModel);
 
     if (hasHeader) {
         const headerBg = buildHeaderBackgroundCSS();
@@ -2382,22 +2393,27 @@ ${linesHTML}
         `font-weight: ${settings.fontWeight}`,
         `line-height: ${settings.lineHeight}`,
         `letter-spacing: ${settings.letterSpacing}em`,
-        `border-radius: ${settings.borderRadius}px`,
         `box-sizing: border-box`,
     ];
 
-    // 배경색 또는 그라데이션
-    containerStyleParts.push(`background: ${buildContainerBackgroundCSS()}`);
+    if (settings.disableContainerStyle) {
+        // 흰색 배경 고정 (컨테이너 크롬 제거)
+        containerStyleParts.push(`background: #ffffff`);
+    } else {
+        containerStyleParts.push(`border-radius: ${settings.borderRadius}px`);
+        // 배경색 또는 그라데이션
+        containerStyleParts.push(`background: ${buildContainerBackgroundCSS()}`);
 
-    // 테두리 추가
-    if (settings.borderWidth > 0) {
-        containerStyleParts.push(`border: ${settings.borderWidth}px ${settings.borderStyle} ${settings.borderColor}`);
-    }
+        // 테두리 추가
+        if (settings.borderWidth > 0) {
+            containerStyleParts.push(`border: ${settings.borderWidth}px ${settings.borderStyle} ${settings.borderColor}`);
+        }
 
-    // 그림자 추가 (0%면 속성 자체 미출력)
-    if (clampNumber(settings.shadowIntensity ?? 0, 0, 100) > 0) {
-        const shadowOpacity = (clampNumber(settings.shadowIntensity ?? 0, 0, 100) / 100).toFixed(2);
-        containerStyleParts.push(`box-shadow: 0 4px 24px rgba(0, 0, 0, ${shadowOpacity})`);
+        // 그림자 추가 (0%면 속성 자체 미출력)
+        if (clampNumber(settings.shadowIntensity ?? 0, 0, 100) > 0) {
+            const shadowOpacity = (clampNumber(settings.shadowIntensity ?? 0, 0, 100) / 100).toFixed(2);
+            containerStyleParts.push(`box-shadow: 0 4px 24px rgba(0, 0, 0, ${shadowOpacity})`);
+        }
     }
 
     const containerStyle = containerStyleParts.join("; ");
@@ -2426,6 +2442,14 @@ function updatePreview() {
         return text !== '' || b.content.includes('<img');
     });
 
+    const disableContainerStyle = Boolean(settings.disableContainerStyle);
+
+    // 컨테이너 사용 안 함일 때, 미리보기 캔버스 배경을 흰색 단색으로 고정
+    const previewCanvasEl = document.getElementById("preview-canvas");
+    if (previewCanvasEl) {
+        previewCanvasEl.classList.toggle("preview-canvas--plain", disableContainerStyle);
+    }
+
     // 미리보기 스타일 적용 (컨테이너)
     previewEl.style.maxWidth = `${settings.containerWidth}px`;
     previewEl.style.margin = `${settings.containerOuterMarginY}em auto`;
@@ -2436,27 +2460,35 @@ function updatePreview() {
     previewEl.style.fontWeight = settings.fontWeight;
     previewEl.style.lineHeight = settings.lineHeight;
     previewEl.style.letterSpacing = `${settings.letterSpacing}em`;
-    previewEl.style.borderRadius = `${settings.borderRadius}px`;
     previewEl.style.boxSizing = "border-box";
 
-    // 배경색 또는 그라데이션
-    previewEl.style.background = buildContainerBackgroundCSS();
-
-    // 컨테이너 외부 여백은 컨테이너 margin으로만 적용 (캔버스 padding은 CSS 기본값 유지)
-
-    // 테두리 적용
-    if (settings.borderWidth > 0) {
-        previewEl.style.border = `${settings.borderWidth}px ${settings.borderStyle} ${settings.borderColor}`;
-    } else {
+    if (disableContainerStyle) {
+        previewEl.style.borderRadius = "0px";
+        previewEl.style.background = "#ffffff";
         previewEl.style.border = "none";
-    }
-
-    // 그림자 적용 (0%면 속성 제거)
-    if (clampNumber(settings.shadowIntensity ?? 0, 0, 100) > 0) {
-        const shadowOpacity = (clampNumber(settings.shadowIntensity ?? 0, 0, 100) / 100).toFixed(2);
-        previewEl.style.boxShadow = `0 4px 24px rgba(0, 0, 0, ${shadowOpacity})`;
+        previewEl.style.boxShadow = "none";
     } else {
-        previewEl.style.boxShadow = "";
+        previewEl.style.borderRadius = `${settings.borderRadius}px`;
+
+        // 배경색 또는 그라데이션
+        previewEl.style.background = buildContainerBackgroundCSS();
+
+        // 컨테이너 외부 여백은 컨테이너 margin으로만 적용 (캔버스 padding은 CSS 기본값 유지)
+
+        // 테두리 적용
+        if (settings.borderWidth > 0) {
+            previewEl.style.border = `${settings.borderWidth}px ${settings.borderStyle} ${settings.borderColor}`;
+        } else {
+            previewEl.style.border = "none";
+        }
+
+        // 그림자 적용 (0%면 속성 제거)
+        if (clampNumber(settings.shadowIntensity ?? 0, 0, 100) > 0) {
+            const shadowOpacity = (clampNumber(settings.shadowIntensity ?? 0, 0, 100) / 100).toFixed(2);
+            previewEl.style.boxShadow = `0 4px 24px rgba(0, 0, 0, ${shadowOpacity})`;
+        } else {
+            previewEl.style.boxShadow = "none";
+        }
     }
 
     // 뱃지 스타일 생성 함수
@@ -2481,11 +2513,10 @@ function updatePreview() {
     } else {
         // 헤더 생성
         let headerHTML = "";
-        const hasHeader = settings.logTitle || settings.charName || settings.aiModel || settings.promptName || settings.subModel;
+        const hasHeader = !settings.disableHeader && (settings.logTitle || settings.charName || settings.aiModel || settings.promptName || settings.subModel);
 
         if (hasHeader) {
             const headerBg = buildHeaderBackgroundCSS();
-            const borderColor = adjustColor(settings.bgColor, 25);
             const headerTextAlign = settings.headerAlign;
             const justifyContent = headerTextAlign === 'center' ? 'center' : headerTextAlign === 'right' ? 'flex-end' : 'flex-start';
 
@@ -3026,6 +3057,18 @@ if (bgGradientToggle && bgGradientLabel) {
     });
 }
 
+// 컨테이너 사용 안 함 토글
+const disableContainerStyleToggle = document.getElementById("style-disable-container-style");
+const disableContainerStyleLabel = document.getElementById("style-disable-container-style-label");
+if (disableContainerStyleToggle && disableContainerStyleLabel) {
+    disableContainerStyleToggle.addEventListener("change", (e) => {
+        settings.disableContainerStyle = e.target.checked;
+        disableContainerStyleLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
+        updatePreview();
+        saveToStorage();
+    });
+}
+
 // 그라데이션 색상
 const gradientColorEl = document.getElementById("style-gradient-color");
 const gradientColorTextEl = document.getElementById("style-gradient-color-text");
@@ -3058,6 +3101,18 @@ if (headerBgGradientToggle && headerBgGradientLabel) {
         settings.headerBgGradient = e.target.checked;
         headerBgGradientLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
         if (headerGradientOptions) headerGradientOptions.style.display = e.target.checked ? "block" : "none";
+        updatePreview();
+        saveToStorage();
+    });
+}
+
+// 헤더 숨기기 토글
+const disableHeaderToggle = document.getElementById("style-disable-header");
+const disableHeaderLabel = document.getElementById("style-disable-header-label");
+if (disableHeaderToggle && disableHeaderLabel) {
+    disableHeaderToggle.addEventListener("change", (e) => {
+        settings.disableHeader = e.target.checked;
+        disableHeaderLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
         updatePreview();
         saveToStorage();
     });
@@ -3423,6 +3478,17 @@ function syncAllUIFromSettings() {
     const showNametagLabelEl = document.getElementById("show-nametag-label");
     if (showNametagEl) showNametagEl.checked = settings.showNametag;
     if (showNametagLabelEl) showNametagLabelEl.textContent = settings.showNametag ? "켜짐" : "꺼짐";
+
+    // 헤더 숨기기/컨테이너 사용 안 함 토글 동기화
+    const disableHeaderEl = document.getElementById("style-disable-header");
+    const disableHeaderLabelEl = document.getElementById("style-disable-header-label");
+    if (disableHeaderEl) disableHeaderEl.checked = Boolean(settings.disableHeader);
+    if (disableHeaderLabelEl) disableHeaderLabelEl.textContent = settings.disableHeader ? "켜짐" : "꺼짐";
+
+    const disableContainerStyleEl = document.getElementById("style-disable-container-style");
+    const disableContainerStyleLabelEl = document.getElementById("style-disable-container-style-label");
+    if (disableContainerStyleEl) disableContainerStyleEl.checked = Boolean(settings.disableContainerStyle);
+    if (disableContainerStyleLabelEl) disableContainerStyleLabelEl.textContent = settings.disableContainerStyle ? "켜짐" : "꺼짐";
 }
 
 console.log("main.js loaded successfully");
@@ -4279,6 +4345,9 @@ const defaultSettings = {
     fontWeight: 400,
     containerWidth: 800,
     containerPadding: 2,
+    // 출력 옵션
+    disableHeader: true,
+    disableContainerStyle: true,
     containerOuterMarginY: 0,
     containerMarginTop: 0,
     containerMarginRight: 0,
