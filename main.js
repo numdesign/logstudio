@@ -1106,9 +1106,23 @@ const settings = {
     bubbleMaxWidth: 85,
     bubbleGap: 1,
     blockGap: 1.5,
+    // 접기/펼치기(<details>)
+    detailsBorderRadius: 12,
+    detailsBorderWidth: 1,
+    detailsSummaryFontSize: 1,
+    detailsSummaryListStyleNone: true,
+    detailsSummaryBgColor: "#f3f4f6",
+    // 로그 블록
+    blockTitleFontSize: 0.75,
+    blockTitleFontWeight: 600,
+    blockTitleMarginBottom: 1,
+    blockTitleColor: "#71717a",
+    blockWrapperBgColor: "#ffffff",
+    blockWrapperBgOpacity: 0,
     lineHeight: 1.8,
+    // 로그 블록(섹션) 단위 줄 간격
+    blockLineHeight: 1.8,
     letterSpacing: 0,
-    paragraphSpacing: 1.2,
     // 헤더 정렬
     headerAlign: "left",
     logTitleSize: 1.8,
@@ -1477,6 +1491,9 @@ Object.entries(themePresets).forEach(([_, preset]) => {
     if (!Object.prototype.hasOwnProperty.call(preset, "headerBgGradientColor")) {
         preset.headerBgGradientColor = preset.userBubbleColor ?? preset.bgGradientColor ?? preset.bgColor;
     }
+    if (!Object.prototype.hasOwnProperty.call(preset, "detailsSummaryBgColor")) {
+        preset.detailsSummaryBgColor = preset.quoteBgColor ?? preset.aiBubbleColor ?? preset.bgGradientColor ?? preset.bgColor;
+    }
 });
 
 if (themePresets["ref-instagram"]) {
@@ -1645,6 +1662,47 @@ function migrateSettingsFromLoadedObject(loaded) {
     }
     settings.badgeScale = clampNumber(settings.badgeScale ?? 1, 0.5, 3);
 
+    // 접기/펼치기(<details>)
+    if (!has("detailsBorderRadius")) settings.detailsBorderRadius = 12;
+    if (!has("detailsBorderWidth")) settings.detailsBorderWidth = 1;
+    if (!has("detailsSummaryFontSize")) settings.detailsSummaryFontSize = 1;
+    if (!has("detailsSummaryListStyleNone")) settings.detailsSummaryListStyleNone = true;
+    if (!has("detailsSummaryBgColor")) settings.detailsSummaryBgColor = settings.quoteBgColor ?? adjustColor(settings.bgColor, 10);
+    settings.detailsBorderRadius = clampNumber(settings.detailsBorderRadius ?? 12, 0, 80);
+    settings.detailsBorderWidth = clampNumber(settings.detailsBorderWidth ?? 1, 0, 12);
+    settings.detailsSummaryFontSize = clampNumber(settings.detailsSummaryFontSize ?? 1, 0.6, 2);
+    settings.detailsSummaryListStyleNone = Boolean(settings.detailsSummaryListStyleNone);
+    if (!/^#[0-9A-Fa-f]{6}$/.test(String(settings.detailsSummaryBgColor))) {
+        settings.detailsSummaryBgColor = settings.quoteBgColor ?? adjustColor(settings.bgColor, 10);
+    }
+
+    // 로그 블록 (제목/배경)
+    if (!has("blockTitleFontSize")) settings.blockTitleFontSize = 0.75;
+    if (!has("blockTitleFontWeight")) settings.blockTitleFontWeight = 600;
+    if (!has("blockTitleMarginBottom")) settings.blockTitleMarginBottom = 1;
+    if (!has("blockTitleColor")) settings.blockTitleColor = adjustColor(settings.textColor, -60);
+    if (!has("blockWrapperBgColor")) settings.blockWrapperBgColor = settings.bgColor;
+    if (!has("blockWrapperBgOpacity")) settings.blockWrapperBgOpacity = 0;
+    settings.blockTitleFontSize = clampNumber(settings.blockTitleFontSize ?? 0.75, 0.4, 3);
+    settings.blockTitleFontWeight = clampNumber(settings.blockTitleFontWeight ?? 600, 100, 900);
+    settings.blockTitleMarginBottom = clampNumber(settings.blockTitleMarginBottom ?? 1, 0, 10);
+    if (!/^#[0-9A-Fa-f]{6}$/.test(String(settings.blockTitleColor))) {
+        settings.blockTitleColor = adjustColor(settings.textColor, -60);
+    }
+    if (!/^#[0-9A-Fa-f]{6}$/.test(String(settings.blockWrapperBgColor))) {
+        settings.blockWrapperBgColor = settings.bgColor;
+    }
+    settings.blockWrapperBgOpacity = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100);
+
+    // 로그 블록 줄 간격
+    if (!has("blockLineHeight")) settings.blockLineHeight = settings.lineHeight ?? 1.8;
+    settings.blockLineHeight = clampNumber(settings.blockLineHeight ?? 1.8, 0.8, 3);
+
+    // 레거시: paragraphSpacing (더 이상 사용하지 않음)
+    if (has("paragraphSpacing")) {
+        delete settings.paragraphSpacing;
+    }
+
     // 헤더 배경 (기존: bgColor 기반 자동 그라데이션)
     if (!has("headerBgColor")) {
         settings.headerBgColor = adjustColor(settings.bgColor, 12);
@@ -1795,7 +1853,8 @@ function parseMarkdown(text) {
 
 // 문단 스타일 생성
 function getParagraphStyle() {
-    return `margin: 0 0 ${settings.paragraphSpacing}em 0; text-align: ${settings.textAlign}; word-break: keep-all;`;
+    // NOTE: margin은 출력 HTML에 포함하지 않음 (line-height 기반으로 간격 제어)
+    return `text-align: ${settings.textAlign}; word-break: keep-all;`;
 }
 
 // HTML 블록 콘텐츠 파싱 (이미지 + 텍스트 혼합 처리)
@@ -1803,9 +1862,12 @@ function parseBlockContent(htmlContent) {
     // HTML이 아니면 (순수 텍스트) 기존 방식으로 처리
     if (!htmlContent.includes('<')) {
         const lines = htmlContent.split(/\r?\n/).filter(line => line.trim() !== '');
+        let prevType = null;
         return lines.map(line => {
             const parsed = parseLine(line);
-            return generateBubbleHTML(parsed, true);
+            const html = generateBubbleHTML(parsed, true, { prevType });
+            prevType = parsed.type;
+            return html;
         }).join('\n');
     }
 
@@ -1815,6 +1877,7 @@ function parseBlockContent(htmlContent) {
     const container = doc.body.firstChild;
 
     const outputParts = [];
+    let prevType = null;
 
     // 재귀적으로 노드 처리
     function processNode(node) {
@@ -1824,7 +1887,8 @@ function parseBlockContent(htmlContent) {
             const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
             lines.forEach(line => {
                 const parsed = parseLine(line);
-                outputParts.push(generateBubbleHTML(parsed, true));
+                outputParts.push(generateBubbleHTML(parsed, true, { prevType }));
+                prevType = parsed.type;
             });
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const tag = node.tagName.toLowerCase();
@@ -1832,6 +1896,7 @@ function parseBlockContent(htmlContent) {
             if (tag === 'img') {
                 // 이미지: background-image div로 출력 (아카라이브 호환)
                 outputParts.push(`    ${getImageDivHTML(node.src)}`);
+                prevType = 'image';
             } else if (tag === 'br') {
                 // br은 무시 (줄바꿈은 텍스트에서 처리)
             } else if (tag === 'div' || tag === 'p') {
@@ -1843,7 +1908,8 @@ function parseBlockContent(htmlContent) {
                 const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
                 lines.forEach(line => {
                     const parsed = parseLine(line);
-                    outputParts.push(generateBubbleHTML(parsed, true));
+                    outputParts.push(generateBubbleHTML(parsed, true, { prevType }));
+                    prevType = parsed.type;
                 });
             }
         }
@@ -2039,12 +2105,14 @@ function parseMarkdownForBubble(text) {
 }
 
 // 말풍선 HTML 생성
-function generateBubbleHTML(parsed, isForCode = false) {
+function generateBubbleHTML(parsed, isForCode = false, context = null) {
     const indent = isForCode ? '    ' : '';
     const bubblePadding = `${settings.bubblePadding}em ${settings.bubblePadding * 1.25}em`;
     const bubbleRadius = `${settings.bubbleRadius}px`;
     const bubbleMaxWidth = `${settings.bubbleMaxWidth}%`;
-    const bubbleMargin = `0 0 ${settings.bubbleGap}em 0`;
+    const prevType = context?.prevType;
+    const bubbleTopGap = (prevType === 'narration' || prevType === 'heading' || prevType === 'image') ? settings.bubbleGap : 0;
+    const bubbleMargin = `${bubbleTopGap}em 0 ${settings.bubbleGap}em 0`;
 
     // 말풍선 테두리 스타일
     let bubbleBorderStyle = "";
@@ -2086,7 +2154,8 @@ function generateBubbleHTML(parsed, isForCode = false) {
                 break;
         }
 
-        const headingStyle = `margin: 0 0 ${marginBottom} 0; font-size: ${fontSize}; font-weight: ${fontWeight}; color: ${settings.headingColor}; line-height: 1.4;`;
+        const headingTopGap = (prevType === 'narration') ? settings.bubbleGap : 0;
+        const headingStyle = `margin: ${headingTopGap}em 0 ${marginBottom} 0; font-size: ${fontSize}; font-weight: ${fontWeight}; color: ${settings.headingColor}; line-height: 1.4;`;
         return `${indent}<p style="${headingStyle}">${content}</p>`;
     }
 
@@ -2238,12 +2307,23 @@ function generateHTML() {
 
         // 접기/펼치기 사용 여부
         if (block.collapsible) {
-            const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0; border: 1px solid ${adjustColor(settings.bgColor, 30)}; border-radius: 12px;`;
-            const summaryStyle = `padding: 1em 1.25em; background: ${adjustColor(settings.bgColor, 10)}; border-radius: 11px; cursor: pointer; font-weight: 500; font-size: 1em; color: ${settings.charColor}; list-style: none; display: flex; align-items: center; gap: 0.5em;`;
-            const contentStyle = `padding: 1.25em;`;
+            const detailsRadius = clampNumber(settings.detailsBorderRadius ?? 12, 0, 80);
+            const detailsBorderWidth = clampNumber(settings.detailsBorderWidth ?? 1, 0, 12);
+            const summaryFontSize = clampNumber(settings.detailsSummaryFontSize ?? 1, 0.6, 2);
+            const summaryListStyle = settings.detailsSummaryListStyleNone ? " list-style: none;" : "";
+            const sectionStyleParts = [
+                `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0`,
+                `border-radius: ${detailsRadius}px`,
+            ];
+            if (detailsBorderWidth > 0) {
+                sectionStyleParts.push(`border: ${detailsBorderWidth}px solid ${settings.dividerColor}`);
+            }
+            const sectionStyle = sectionStyleParts.join("; ");
+            const summaryStyle = `padding: 1em 1.25em; background: ${settings.detailsSummaryBgColor}; border-radius: ${detailsRadius}px; cursor: pointer; font-weight: 500; font-size: ${summaryFontSize}em; color: ${settings.charColor};${summaryListStyle} display: list-item;`;
+            const contentStyle = `padding: 1.25em; line-height: ${settings.blockLineHeight};`;
 
             return `  <details open style="${sectionStyle}">
-    <summary style="${summaryStyle}">▼ ${escapeHTMLContent(block.title)}</summary>
+    <summary style="${summaryStyle}">${escapeHTMLContent(block.title)}</summary>
     <div style="${contentStyle}">
 ${linesHTML}
     </div>
@@ -2251,15 +2331,24 @@ ${linesHTML}
         } else {
             // 블록이 여러 개일 때만 섹션 구분 추가
             if (blocksWithContent.length > 1) {
-                const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0 0 0; ${index > 0 ? `padding-top: ${settings.blockGap}em; border-top: 1px solid ${adjustColor(settings.bgColor, 25)};` : ''}`;
-                const labelStyle = `margin: 0 0 1em 0; font-size: 0.75em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: ${adjustColor(settings.textColor, -60)};`;
+                const blockBg = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) > 0
+                    ? `background: ${applyOpacityToColor(settings.blockWrapperBgColor, clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) / 100)};`
+                    : "";
+                const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0 0 0; line-height: ${settings.blockLineHeight}; ${index > 0 ? `padding-top: ${settings.blockGap}em; border-top: 1px solid ${settings.dividerColor};` : ''} ${blockBg}`.trim();
+                const labelStyle = `margin: 0 0 ${settings.blockTitleMarginBottom}em 0; font-size: ${settings.blockTitleFontSize}em; font-weight: ${settings.blockTitleFontWeight}; text-transform: uppercase; letter-spacing: 0.1em; color: ${settings.blockTitleColor};`;
 
                 return `  <div style="${sectionStyle}">
     <p style="${labelStyle}">${escapeHTMLContent(block.title)}</p>
 ${linesHTML}
   </div>`;
             } else {
-                return linesHTML;
+                const blockBg = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) > 0
+                    ? `background: ${applyOpacityToColor(settings.blockWrapperBgColor, clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) / 100)};`
+                    : "";
+                const wrapperStyle = `${blockBg} line-height: ${settings.blockLineHeight};`.trim();
+                return `  <div style="${wrapperStyle}">
+${linesHTML}
+    </div>`;
             }
         }
     }).join("\n");
@@ -2444,33 +2533,54 @@ function updatePreview() {
         // 블록별 HTML 생성
         const blocksHTML = blocksWithContent.map((block, index) => {
             const lines = block.content.split(/\r?\n/).filter((line) => line.trim() !== "");
+            let prevType = null;
             const linesHTML = lines.map((line) => {
                 const parsed = parseLine(line);
-                return generateBubbleHTML(parsed, false);
+                const html = generateBubbleHTML(parsed, false, { prevType });
+                prevType = parsed.type;
+                return html;
             }).join("");
 
             // 접기/펼치기 사용 여부
             if (block.collapsible) {
-                const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0; border: 1px solid ${adjustColor(settings.bgColor, 30)}; border-radius: 12px;`;
-                const summaryStyle = `padding: 1em 1.25em; background: ${adjustColor(settings.bgColor, 10)}; border-radius: 11px; cursor: pointer; font-weight: 500; font-size: 1em; color: ${settings.charColor}; list-style: none; display: flex; align-items: center; gap: 0.5em;`;
-                const contentStyle = `padding: 1.25em;`;
+                const detailsRadius = clampNumber(settings.detailsBorderRadius ?? 12, 0, 80);
+                const detailsBorderWidth = clampNumber(settings.detailsBorderWidth ?? 1, 0, 12);
+                const summaryFontSize = clampNumber(settings.detailsSummaryFontSize ?? 1, 0.6, 2);
+                const summaryListStyle = settings.detailsSummaryListStyleNone ? " list-style: none;" : "";
+                const sectionStyleParts = [
+                    `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0`,
+                    `border-radius: ${detailsRadius}px`,
+                ];
+                if (detailsBorderWidth > 0) {
+                    sectionStyleParts.push(`border: ${detailsBorderWidth}px solid ${settings.dividerColor}`);
+                }
+                const sectionStyle = sectionStyleParts.join("; ");
+                const summaryStyle = `padding: 1em 1.25em; background: ${settings.detailsSummaryBgColor}; border-radius: ${detailsRadius}px; cursor: pointer; font-weight: 500; font-size: ${summaryFontSize}em; color: ${settings.charColor};${summaryListStyle} display: list-item;`;
+                const contentStyle = `padding: 1.25em; line-height: ${settings.blockLineHeight};`;
 
                 return `<details open style="${sectionStyle}">
-                    <summary style="${summaryStyle}">▼ ${escapeHTMLContent(block.title)}</summary>
+                    <summary style="${summaryStyle}">${escapeHTMLContent(block.title)}</summary>
                     <div style="${contentStyle}">${linesHTML}</div>
                 </details>`;
             } else {
                 // 블록이 여러 개일 때만 섹션 구분 추가
                 if (blocksWithContent.length > 1) {
-                    const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0 0 0; ${index > 0 ? `padding-top: ${settings.blockGap}em; border-top: 1px solid ${adjustColor(settings.bgColor, 25)};` : ''}`;
-                    const labelStyle = `margin: 0 0 1em 0; font-size: 0.75em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: ${adjustColor(settings.textColor, -60)};`;
+                    const blockBg = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) > 0
+                        ? `background: ${applyOpacityToColor(settings.blockWrapperBgColor, clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) / 100)};`
+                        : "";
+                    const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0 0 0; line-height: ${settings.blockLineHeight}; ${index > 0 ? `padding-top: ${settings.blockGap}em; border-top: 1px solid ${settings.dividerColor};` : ''} ${blockBg}`.trim();
+                    const labelStyle = `margin: 0 0 ${settings.blockTitleMarginBottom}em 0; font-size: ${settings.blockTitleFontSize}em; font-weight: ${settings.blockTitleFontWeight}; text-transform: uppercase; letter-spacing: 0.1em; color: ${settings.blockTitleColor};`;
 
                     return `<div style="${sectionStyle}">
                         <p style="${labelStyle}">${escapeHTMLContent(block.title)}</p>
                         ${linesHTML}
                     </div>`;
                 } else {
-                    return `<div>${linesHTML}</div>`;
+                    const blockBg = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) > 0
+                        ? `background: ${applyOpacityToColor(settings.blockWrapperBgColor, clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) / 100)};`
+                        : "";
+                    const wrapperStyle = `${blockBg} line-height: ${settings.blockLineHeight};`.trim();
+                    return `<div style="${wrapperStyle}">${linesHTML}</div>`;
                 }
             }
         }).join("");
@@ -2591,6 +2701,9 @@ themePresetBtns.forEach(btn => {
         if (!Object.prototype.hasOwnProperty.call(preset, "headerBgGradientColor")) {
             settings.headerBgGradientColor = settings.userBubbleColor ?? settings.bgGradientColor ?? adjustColor(settings.bgColor, 6);
         }
+        if (!Object.prototype.hasOwnProperty.call(preset, "detailsSummaryBgColor")) {
+            settings.detailsSummaryBgColor = settings.quoteBgColor ?? settings.aiBubbleColor ?? settings.bgGradientColor ?? adjustColor(settings.bgColor, 10);
+        }
 
         // UI 동기화
         syncUIFromSettings();
@@ -2624,6 +2737,9 @@ function syncUIFromSettings() {
         "style-header-bg": "headerBgColor",
         "style-header-gradient-color": "headerBgGradientColor",
         "style-header-border-color": "headerBorderColor",
+        "style-details-summary-bg": "detailsSummaryBgColor",
+        "style-block-title-color": "blockTitleColor",
+        "style-block-bg": "blockWrapperBgColor",
         "style-ai-bubble-gradient-color": "aiBubbleGradientColor",
         "style-user-bubble-gradient-color": "userBubbleGradientColor",
         "style-bubble-border-color": "bubbleBorderColor",
@@ -2658,6 +2774,9 @@ const colorInputs = [
     { colorId: "style-badge-sub", textId: "style-badge-sub-text", key: "badgeSubColor" },
     { colorId: "style-border-color", textId: "style-border-color-text", key: "borderColor" },
     { colorId: "style-header-bg", textId: "style-header-bg-text", key: "headerBgColor" },
+    { colorId: "style-details-summary-bg", textId: "style-details-summary-bg-text", key: "detailsSummaryBgColor" },
+    { colorId: "style-block-title-color", textId: "style-block-title-color-text", key: "blockTitleColor" },
+    { colorId: "style-block-bg", textId: "style-block-bg-text", key: "blockWrapperBgColor" },
     { colorId: "style-header-gradient-color", textId: "style-header-gradient-color-text", key: "headerBgGradientColor" },
     { colorId: "style-ai-bubble-gradient-color", textId: "style-ai-bubble-gradient-color-text", key: "aiBubbleGradientColor" },
     { colorId: "style-user-bubble-gradient-color", textId: "style-user-bubble-gradient-color-text", key: "userBubbleGradientColor" },
@@ -2700,9 +2819,16 @@ const rangeInputs = [
     { id: "style-bubble-max-width", key: "bubbleMaxWidth", valueId: "style-bubble-max-width-value", unit: "%" },
     { id: "style-bubble-gap", key: "bubbleGap", valueId: "style-bubble-gap-value", unit: "em" },
     { id: "style-block-gap", key: "blockGap", valueId: "style-block-gap-value", unit: "em" },
+    { id: "style-details-radius", key: "detailsBorderRadius", valueId: "style-details-radius-value", unit: "px" },
+    { id: "style-details-border-width", key: "detailsBorderWidth", valueId: "style-details-border-width-value", unit: "px" },
+    { id: "style-details-summary-font-size", key: "detailsSummaryFontSize", valueId: "style-details-summary-font-size-value", unit: "em" },
+    { id: "style-block-title-size", key: "blockTitleFontSize", valueId: "style-block-title-size-value", unit: "em" },
+    { id: "style-block-title-weight", key: "blockTitleFontWeight", valueId: "style-block-title-weight-value", unit: "" },
+    { id: "style-block-title-margin-bottom", key: "blockTitleMarginBottom", valueId: "style-block-title-margin-bottom-value", unit: "em" },
+    { id: "style-block-bg-opacity", key: "blockWrapperBgOpacity", valueId: "style-block-bg-opacity-value", unit: "%" },
     { id: "style-line-height", key: "lineHeight", valueId: "style-line-height-value", unit: "" },
+    { id: "style-block-line-height", key: "blockLineHeight", valueId: "style-block-line-height-value", unit: "" },
     { id: "style-letter-spacing", key: "letterSpacing", valueId: "style-letter-spacing-value", unit: "em" },
-    { id: "style-paragraph-spacing", key: "paragraphSpacing", valueId: "style-paragraph-spacing-value", unit: "em" },
     { id: "style-border-width", key: "borderWidth", valueId: "style-border-width-value", unit: "px" },
     { id: "style-shadow-intensity", key: "shadowIntensity", valueId: "style-shadow-intensity-value", unit: "%" },
     { id: "style-badge-radius", key: "badgeRadius", valueId: "style-badge-radius-value", unit: "px" },
@@ -3061,6 +3187,19 @@ if (bubbleBorderLeftOnlyToggle && bubbleBorderLeftOnlyLabel) {
     });
 }
 
+// <details> summary list-style:none 토글
+const detailsSummaryListStyleNoneToggle = document.getElementById("style-details-summary-list-style-none");
+const detailsSummaryListStyleNoneLabel = document.getElementById("style-details-summary-list-style-none-label");
+
+if (detailsSummaryListStyleNoneToggle && detailsSummaryListStyleNoneLabel) {
+    detailsSummaryListStyleNoneToggle.addEventListener("change", (e) => {
+        settings.detailsSummaryListStyleNone = e.target.checked;
+        detailsSummaryListStyleNoneLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
+        updatePreview();
+        saveToStorage();
+    });
+}
+
 // ===== 네임태그 토글 =====
 const showNametagToggle = document.getElementById("show-nametag");
 const showNametagLabel = document.getElementById("show-nametag-label");
@@ -3178,9 +3317,16 @@ function syncAllUIFromSettings() {
         { id: "style-bubble-max-width", key: "bubbleMaxWidth", valueId: "style-bubble-max-width-value", unit: "%" },
         { id: "style-bubble-gap", key: "bubbleGap", valueId: "style-bubble-gap-value", unit: "em" },
         { id: "style-block-gap", key: "blockGap", valueId: "style-block-gap-value", unit: "em" },
+        { id: "style-details-radius", key: "detailsBorderRadius", valueId: "style-details-radius-value", unit: "px" },
+        { id: "style-details-border-width", key: "detailsBorderWidth", valueId: "style-details-border-width-value", unit: "px" },
+        { id: "style-details-summary-font-size", key: "detailsSummaryFontSize", valueId: "style-details-summary-font-size-value", unit: "em" },
+        { id: "style-block-title-size", key: "blockTitleFontSize", valueId: "style-block-title-size-value", unit: "em" },
+        { id: "style-block-title-weight", key: "blockTitleFontWeight", valueId: "style-block-title-weight-value", unit: "" },
+        { id: "style-block-title-margin-bottom", key: "blockTitleMarginBottom", valueId: "style-block-title-margin-bottom-value", unit: "em" },
+        { id: "style-block-bg-opacity", key: "blockWrapperBgOpacity", valueId: "style-block-bg-opacity-value", unit: "%" },
         { id: "style-line-height", key: "lineHeight", valueId: "style-line-height-value", unit: "" },
+        { id: "style-block-line-height", key: "blockLineHeight", valueId: "style-block-line-height-value", unit: "" },
         { id: "style-letter-spacing", key: "letterSpacing", valueId: "style-letter-spacing-value", unit: "em" },
-        { id: "style-paragraph-spacing", key: "paragraphSpacing", valueId: "style-paragraph-spacing-value", unit: "em" },
         { id: "style-border-width", key: "borderWidth", valueId: "style-border-width-value", unit: "px" },
         { id: "style-shadow-intensity", key: "shadowIntensity", valueId: "style-shadow-intensity-value", unit: "%" },
         { id: "style-badge-radius", key: "badgeRadius", valueId: "style-badge-radius-value", unit: "px" },
@@ -3328,6 +3474,12 @@ function syncAllUIFromSettings() {
     const bubbleBorderLeftOnlyLabelEl = document.getElementById("style-bubble-border-left-only-label");
     if (bubbleBorderLeftOnlyEl) bubbleBorderLeftOnlyEl.checked = settings.bubbleBorderLeftOnly;
     if (bubbleBorderLeftOnlyLabelEl) bubbleBorderLeftOnlyLabelEl.textContent = settings.bubbleBorderLeftOnly ? "켜짐" : "꺼짐";
+
+    // <details> summary list-style:none 동기화
+    const detailsSummaryListStyleNoneEl = document.getElementById("style-details-summary-list-style-none");
+    const detailsSummaryListStyleNoneLabelEl = document.getElementById("style-details-summary-list-style-none-label");
+    if (detailsSummaryListStyleNoneEl) detailsSummaryListStyleNoneEl.checked = Boolean(settings.detailsSummaryListStyleNone);
+    if (detailsSummaryListStyleNoneLabelEl) detailsSummaryListStyleNoneLabelEl.textContent = settings.detailsSummaryListStyleNone ? "켜짐" : "꺼짐";
 
     // 네임태그 토글 동기화
     const showNametagEl = document.getElementById("show-nametag");
@@ -4202,8 +4354,8 @@ const defaultSettings = {
     bubbleGap: 1,
     blockGap: 1.5,
     lineHeight: 1.8,
+    blockLineHeight: 1.8,
     letterSpacing: 0,
-    paragraphSpacing: 1.2,
     headerAlign: "left",
     logTitleSize: 1.8,
     borderWidth: 0,
