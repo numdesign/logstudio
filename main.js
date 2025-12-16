@@ -1095,9 +1095,9 @@ const settings = {
     containerPadding: 2,
     // 출력 옵션
     // - 헤더 숨기기: 헤더 영역을 아예 생성하지 않음
-    disableHeader: true,
+    disableHeader: false,
     // - 컨테이너 사용 안 함: 배경/테두리/둥글기/그림자 미적용 + 미리보기 캔버스 배경 흰색 고정
-    disableContainerStyle: true,
+    disableContainerStyle: false,
     // 컨테이너 외부 여백(위/아래) - margin으로 적용
     containerOuterMarginY: 0,
     // (레거시 호환) 4방향 외부 여백
@@ -1187,6 +1187,11 @@ const settings = {
     userBubbleGradientColor: "#e5e7eb",
     userBubbleGradientAngle: 135,
 };
+
+// 기본 설정값 (초기화용)
+// - settings 선언 직후 스냅샷을 떠서, LocalStorage 로드로 인해 기본값이 오염되지 않게 함
+// - settings에 새 키가 추가되면 resetAll도 자동으로 따라감
+const defaultSettings = JSON.parse(JSON.stringify(settings));
 
 // 테마 프리셋 정의
 const themePresets = {
@@ -4317,104 +4322,23 @@ if (findReplaceBtn) {
 // ===== 전체 초기화 =====
 const resetAllBtn = document.getElementById('reset-all-btn');
 
-// 기본 설정값 (초기화용)
-const defaultSettings = {
-    logTitle: "",
-    charName: "",
-    charLink: "",
-    userName: "",
-    aiModel: "",
-    promptName: "",
-    subModel: "",
-    bgColor: "#ffffff",
-    textColor: "#18181b",
-    charColor: "#18181b",
-    userColor: "#71717a",
-    boldColor: "#dc2626",
-    italicColor: "#6366f1",
-    dialogueColor: "#059669",
-    dialogueBgColor: "#ecfdf5",
-    quoteColor: "#6b7280",
-    quoteBgColor: "#f3f4f6",
-    headingColor: "#111827",
-    dividerColor: "#d1d5db",
-    aiBubbleColor: "#f4f4f5",
-    userBubbleColor: "#dbeafe",
-    fontFamily: "Pretendard, sans-serif",
-    fontSize: 16,
-    fontWeight: 400,
-    containerWidth: 800,
-    containerPadding: 2,
-    // 출력 옵션
-    disableHeader: true,
-    disableContainerStyle: true,
-    containerOuterMarginY: 0,
-    containerMarginTop: 0,
-    containerMarginRight: 0,
-    containerMarginBottom: 0,
-    containerMarginLeft: 0,
-    borderRadius: 16,
-    bubbleRadius: 16,
-    bubblePadding: 1,
-    bubbleMaxWidth: 85,
-    bubbleGap: 1,
-    blockGap: 1.5,
-    lineHeight: 1.8,
-    blockLineHeight: 1.8,
-    letterSpacing: 0,
-    headerAlign: "left",
-    logTitleSize: 1.8,
-    borderWidth: 0,
-    borderColor: "#e4e4e7",
-    borderStyle: "solid",
-    shadowIntensity: 30,
-    bgGradient: false,
-    bgGradientColor: "#e0e7ff",
-    bgGradientDirection: "to bottom right",
-    bgGradientAngle: 135,
-    bgGradientRadial: false,
-    textAlign: "justify",
-    badgeModelColor: "#18181b",
-    badgePromptColor: "#71717a",
-    badgeSubColor: "#a1a1aa",
-    badgeRadius: 20,
-    badgeStyle: "filled",
-    badgeScale: 1,
-    nametagFontSize: 0.75,
-    bubbleBorder: false,
-    bubbleBorderWidth: 2,
-    bubbleBorderColor: "#6366f1",
-    bubbleBorderLeftOnly: false,
-    imageMaxWidth: 500,
-    imageMargin: 0.5,
-    imageBorderRadius: 8,
-    imageAlign: "center",
-    imageBorderWidth: 0,
-    imageBorderColor: "#e5e5e5",
-    imageShadow: "none",
-    showNametag: true,
-
-    // 헤더 배경
-    headerBgColor: "#ffffff",
-    headerBgOpacity: 100,
-    headerBgGradient: false,
-    headerBgGradientColor: "#f5f5f5",
-    headerBgGradientAngle: 135,
-
-    // 말풍선 배경(고급)
-    aiBubbleOpacity: 100,
-    aiBubbleGradient: false,
-    aiBubbleGradientColor: "#e5e7eb",
-    aiBubbleGradientAngle: 135,
-    userBubbleOpacity: 100,
-    userBubbleGradient: false,
-    userBubbleGradientColor: "#e5e7eb",
-    userBubbleGradientAngle: 135,
-};
+// 기본 설정값(defaultSettings)은 settings 선언 직후에 캡처됩니다.
 
 function resetAll() {
     // 설정 초기화
     Object.assign(settings, defaultSettings);
+
+    // 런타임 캐시 초기화 (Undo/Redo, 디바운스 타이머, 이미지 스토어)
+    historyStack.length = 0;
+    redoStack.length = 0;
+    isUndoRedoAction = false;
+    lastFocusedBlockId = null;
+    if (saveDebounceTimer) {
+        clearTimeout(saveDebounceTimer);
+        saveDebounceTimer = null;
+    }
+    imageStore.clear();
+    imageIdCounter = 0;
 
     // 블록 초기화
     logBlocks = [];
@@ -4428,6 +4352,9 @@ function resetAll() {
     syncAllUIFromSettings();
     renderLogBlocks();
     updatePreview();
+
+    // 초기 히스토리 상태 저장 (Undo로 이전 상태가 되살아나지 않게)
+    pushHistory();
     saveToStorage();
 
     showToast('모든 블록과 설정이 초기화되었습니다.');
