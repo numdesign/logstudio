@@ -1117,8 +1117,6 @@ const settings = {
     blockTitleFontWeight: 600,
     blockTitleMarginBottom: 1,
     blockTitleColor: "#71717a",
-    blockWrapperBgColor: "#ffffff",
-    blockWrapperBgOpacity: 0,
     lineHeight: 1.8,
     // 로그 블록(섹션) 단위 줄 간격
     blockLineHeight: 1.8,
@@ -1127,10 +1125,8 @@ const settings = {
     headerAlign: "left",
     logTitleSize: 1.8,
     headerRadius: 16,
-    // 헤더 테두리
-    headerBorder: false,
-    headerBorderWidth: 1,
-    headerBorderColor: "#e4e4e7",
+    // 헤더 테두리 (0이면 적용 안 함; 색상은 dividerColor를 사용)
+    headerBorderWidth: 0,
     // 테두리 & 그림자
     borderWidth: 0,
     borderColor: "#e4e4e7",
@@ -1676,23 +1672,21 @@ function migrateSettingsFromLoadedObject(loaded) {
         settings.detailsSummaryBgColor = settings.quoteBgColor ?? adjustColor(settings.bgColor, 10);
     }
 
-    // 로그 블록 (제목/배경)
+    // 로그 블록 (제목)
     if (!has("blockTitleFontSize")) settings.blockTitleFontSize = 0.75;
     if (!has("blockTitleFontWeight")) settings.blockTitleFontWeight = 600;
     if (!has("blockTitleMarginBottom")) settings.blockTitleMarginBottom = 1;
     if (!has("blockTitleColor")) settings.blockTitleColor = adjustColor(settings.textColor, -60);
-    if (!has("blockWrapperBgColor")) settings.blockWrapperBgColor = settings.bgColor;
-    if (!has("blockWrapperBgOpacity")) settings.blockWrapperBgOpacity = 0;
     settings.blockTitleFontSize = clampNumber(settings.blockTitleFontSize ?? 0.75, 0.4, 3);
     settings.blockTitleFontWeight = clampNumber(settings.blockTitleFontWeight ?? 600, 100, 900);
     settings.blockTitleMarginBottom = clampNumber(settings.blockTitleMarginBottom ?? 1, 0, 10);
     if (!/^#[0-9A-Fa-f]{6}$/.test(String(settings.blockTitleColor))) {
         settings.blockTitleColor = adjustColor(settings.textColor, -60);
     }
-    if (!/^#[0-9A-Fa-f]{6}$/.test(String(settings.blockWrapperBgColor))) {
-        settings.blockWrapperBgColor = settings.bgColor;
-    }
-    settings.blockWrapperBgOpacity = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100);
+
+    // 레거시: 로그 블록 배경 (더 이상 사용하지 않음)
+    if (has("blockWrapperBgColor")) delete settings.blockWrapperBgColor;
+    if (has("blockWrapperBgOpacity")) delete settings.blockWrapperBgOpacity;
 
     // 로그 블록 줄 간격
     if (!has("blockLineHeight")) settings.blockLineHeight = settings.lineHeight ?? 1.8;
@@ -1712,19 +1706,24 @@ function migrateSettingsFromLoadedObject(loaded) {
         settings.headerBgGradientAngle = 135;
     }
     if (!has("headerRadius")) settings.headerRadius = 16;
-    if (!has("headerBorder")) settings.headerBorder = false;
-    if (!has("headerBorderWidth")) settings.headerBorderWidth = 1;
-    if (!has("headerBorderColor")) settings.headerBorderColor = adjustColor(settings.bgColor, 25);
+    // 헤더 테두리: 토글 제거, 두께만 사용 (0이면 테두리 없음)
+    if (!has("headerBorderWidth")) {
+        if (has("headerBorder")) {
+            settings.headerBorderWidth = loaded.headerBorder ? (settings.headerBorderWidth ?? 1) : 0;
+        } else {
+            settings.headerBorderWidth = settings.headerBorderWidth ?? 0;
+        }
+    }
     if (!has("headerBgOpacity")) settings.headerBgOpacity = 100;
     if (!has("headerBgGradient")) settings.headerBgGradient = Boolean(settings.headerBgGradient);
     if (!has("headerBgGradientColor")) settings.headerBgGradientColor = adjustColor(settings.bgColor, 6);
     if (!has("headerBgGradientAngle")) settings.headerBgGradientAngle = 135;
     settings.headerRadius = clampNumber(settings.headerRadius ?? 16, 0, 80);
-    settings.headerBorder = Boolean(settings.headerBorder);
-    settings.headerBorderWidth = clampNumber(settings.headerBorderWidth ?? 1, 1, 12);
-    if (!/^#[0-9A-Fa-f]{6}$/.test(String(settings.headerBorderColor))) {
-        settings.headerBorderColor = adjustColor(settings.bgColor, 25);
-    }
+    settings.headerBorderWidth = clampNumber(settings.headerBorderWidth ?? 0, 0, 12);
+
+    // 레거시: 헤더 테두리 토글/색상 (더 이상 사용하지 않음)
+    if (has("headerBorder")) delete settings.headerBorder;
+    if (has("headerBorderColor")) delete settings.headerBorderColor;
     settings.headerBgOpacity = clampNumber(settings.headerBgOpacity ?? 100, 0, 100);
     settings.headerBgGradientAngle = normalizeAngleDegrees(settings.headerBgGradientAngle, 135);
 
@@ -2235,8 +2234,8 @@ function generateHTML() {
 
     if (hasHeader) {
         const headerBg = buildHeaderBackgroundCSS();
-        const headerBorderStyle = settings.headerBorder
-            ? ` border: ${settings.headerBorderWidth}px solid ${settings.headerBorderColor};`
+        const headerBorderStyle = (settings.headerBorderWidth ?? 0) > 0
+            ? ` border: ${settings.headerBorderWidth}px solid ${settings.dividerColor};`
             : "";
         const headerStyle = `margin-bottom: 1.5em; padding: 1.5em; background: ${headerBg}; border-radius: ${settings.headerRadius}px;${headerBorderStyle}`;
         const headerTextAlign = settings.headerAlign;
@@ -2331,10 +2330,7 @@ ${linesHTML}
         } else {
             // 블록이 여러 개일 때만 섹션 구분 추가
             if (blocksWithContent.length > 1) {
-                const blockBg = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) > 0
-                    ? `background: ${applyOpacityToColor(settings.blockWrapperBgColor, clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) / 100)};`
-                    : "";
-                const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0 0 0; line-height: ${settings.blockLineHeight}; ${index > 0 ? `padding-top: ${settings.blockGap}em; border-top: 1px solid ${settings.dividerColor};` : ''} ${blockBg}`.trim();
+                const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0 0 0; line-height: ${settings.blockLineHeight}; ${index > 0 ? `padding-top: ${settings.blockGap}em; border-top: 1px solid ${settings.dividerColor};` : ''}`.trim();
                 const labelStyle = `margin: 0 0 ${settings.blockTitleMarginBottom}em 0; font-size: ${settings.blockTitleFontSize}em; font-weight: ${settings.blockTitleFontWeight}; text-transform: uppercase; letter-spacing: 0.1em; color: ${settings.blockTitleColor};`;
 
                 return `  <div style="${sectionStyle}">
@@ -2342,10 +2338,7 @@ ${linesHTML}
 ${linesHTML}
   </div>`;
             } else {
-                const blockBg = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) > 0
-                    ? `background: ${applyOpacityToColor(settings.blockWrapperBgColor, clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) / 100)};`
-                    : "";
-                const wrapperStyle = `${blockBg} line-height: ${settings.blockLineHeight};`.trim();
+                const wrapperStyle = `line-height: ${settings.blockLineHeight};`;
                 return `  <div style="${wrapperStyle}">
 ${linesHTML}
     </div>`;
@@ -2524,8 +2517,8 @@ function updatePreview() {
                 tagsHTML = `<div style="${marginTop} text-align: ${settings.headerAlign};">${tagsWithFixedMargin.join("")}</div>`;
             }
 
-            const headerBorderStyle = settings.headerBorder
-                ? ` border: ${settings.headerBorderWidth}px solid ${settings.headerBorderColor};`
+            const headerBorderStyle = (settings.headerBorderWidth ?? 0) > 0
+                ? ` border: ${settings.headerBorderWidth}px solid ${settings.dividerColor};`
                 : "";
             headerHTML = `<div style="margin-bottom: 1.5em; padding: 1.5em; background: ${headerBg}; border-radius: ${settings.headerRadius}px;${headerBorderStyle}">${charBadgeHTML}${logTitleHTML}${tagsHTML}</div>`;
         }
@@ -2565,10 +2558,7 @@ function updatePreview() {
             } else {
                 // 블록이 여러 개일 때만 섹션 구분 추가
                 if (blocksWithContent.length > 1) {
-                    const blockBg = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) > 0
-                        ? `background: ${applyOpacityToColor(settings.blockWrapperBgColor, clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) / 100)};`
-                        : "";
-                    const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0 0 0; line-height: ${settings.blockLineHeight}; ${index > 0 ? `padding-top: ${settings.blockGap}em; border-top: 1px solid ${settings.dividerColor};` : ''} ${blockBg}`.trim();
+                    const sectionStyle = `margin: ${index > 0 ? settings.blockGap + 'em' : '0'} 0 0 0; line-height: ${settings.blockLineHeight}; ${index > 0 ? `padding-top: ${settings.blockGap}em; border-top: 1px solid ${settings.dividerColor};` : ''}`.trim();
                     const labelStyle = `margin: 0 0 ${settings.blockTitleMarginBottom}em 0; font-size: ${settings.blockTitleFontSize}em; font-weight: ${settings.blockTitleFontWeight}; text-transform: uppercase; letter-spacing: 0.1em; color: ${settings.blockTitleColor};`;
 
                     return `<div style="${sectionStyle}">
@@ -2576,10 +2566,7 @@ function updatePreview() {
                         ${linesHTML}
                     </div>`;
                 } else {
-                    const blockBg = clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) > 0
-                        ? `background: ${applyOpacityToColor(settings.blockWrapperBgColor, clampNumber(settings.blockWrapperBgOpacity ?? 0, 0, 100) / 100)};`
-                        : "";
-                    const wrapperStyle = `${blockBg} line-height: ${settings.blockLineHeight};`.trim();
+                    const wrapperStyle = `line-height: ${settings.blockLineHeight};`;
                     return `<div style="${wrapperStyle}">${linesHTML}</div>`;
                 }
             }
@@ -2736,10 +2723,8 @@ function syncUIFromSettings() {
         "style-gradient-color": "bgGradientColor",
         "style-header-bg": "headerBgColor",
         "style-header-gradient-color": "headerBgGradientColor",
-        "style-header-border-color": "headerBorderColor",
         "style-details-summary-bg": "detailsSummaryBgColor",
         "style-block-title-color": "blockTitleColor",
-        "style-block-bg": "blockWrapperBgColor",
         "style-ai-bubble-gradient-color": "aiBubbleGradientColor",
         "style-user-bubble-gradient-color": "userBubbleGradientColor",
         "style-bubble-border-color": "bubbleBorderColor",
@@ -2776,7 +2761,6 @@ const colorInputs = [
     { colorId: "style-header-bg", textId: "style-header-bg-text", key: "headerBgColor" },
     { colorId: "style-details-summary-bg", textId: "style-details-summary-bg-text", key: "detailsSummaryBgColor" },
     { colorId: "style-block-title-color", textId: "style-block-title-color-text", key: "blockTitleColor" },
-    { colorId: "style-block-bg", textId: "style-block-bg-text", key: "blockWrapperBgColor" },
     { colorId: "style-header-gradient-color", textId: "style-header-gradient-color-text", key: "headerBgGradientColor" },
     { colorId: "style-ai-bubble-gradient-color", textId: "style-ai-bubble-gradient-color-text", key: "aiBubbleGradientColor" },
     { colorId: "style-user-bubble-gradient-color", textId: "style-user-bubble-gradient-color-text", key: "userBubbleGradientColor" },
@@ -2825,7 +2809,6 @@ const rangeInputs = [
     { id: "style-block-title-size", key: "blockTitleFontSize", valueId: "style-block-title-size-value", unit: "em" },
     { id: "style-block-title-weight", key: "blockTitleFontWeight", valueId: "style-block-title-weight-value", unit: "" },
     { id: "style-block-title-margin-bottom", key: "blockTitleMarginBottom", valueId: "style-block-title-margin-bottom-value", unit: "em" },
-    { id: "style-block-bg-opacity", key: "blockWrapperBgOpacity", valueId: "style-block-bg-opacity-value", unit: "%" },
     { id: "style-line-height", key: "lineHeight", valueId: "style-line-height-value", unit: "" },
     { id: "style-block-line-height", key: "blockLineHeight", valueId: "style-block-line-height-value", unit: "" },
     { id: "style-letter-spacing", key: "letterSpacing", valueId: "style-letter-spacing-value", unit: "em" },
@@ -3068,44 +3051,6 @@ if (headerBgGradientToggle && headerBgGradientLabel) {
     });
 }
 
-// 헤더 테두리 토글
-const headerBorderToggle = document.getElementById("style-header-border");
-const headerBorderLabel = document.getElementById("style-header-border-label");
-const headerBorderOptions = document.getElementById("header-border-options");
-
-if (headerBorderToggle && headerBorderLabel) {
-    headerBorderToggle.addEventListener("change", (e) => {
-        settings.headerBorder = e.target.checked;
-        headerBorderLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
-        if (headerBorderOptions) headerBorderOptions.style.display = e.target.checked ? "block" : "none";
-        updatePreview();
-        saveToStorage();
-    });
-}
-
-// 헤더 테두리 색상
-const headerBorderColorEl = document.getElementById("style-header-border-color");
-const headerBorderColorTextEl = document.getElementById("style-header-border-color-text");
-
-if (headerBorderColorEl && headerBorderColorTextEl) {
-    headerBorderColorEl.addEventListener("input", (e) => {
-        settings.headerBorderColor = e.target.value;
-        headerBorderColorTextEl.value = e.target.value;
-        updatePreview();
-        saveToStorage();
-    });
-
-    headerBorderColorTextEl.addEventListener("input", (e) => {
-        const val = e.target.value;
-        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-            settings.headerBorderColor = val;
-            headerBorderColorEl.value = val;
-            updatePreview();
-            saveToStorage();
-        }
-    });
-}
-
 // AI 말풍선 그라데이션 토글
 const aiBubbleGradientToggle = document.getElementById("style-ai-bubble-gradient");
 const aiBubbleGradientLabel = document.getElementById("style-ai-bubble-gradient-label");
@@ -3323,7 +3268,6 @@ function syncAllUIFromSettings() {
         { id: "style-block-title-size", key: "blockTitleFontSize", valueId: "style-block-title-size-value", unit: "em" },
         { id: "style-block-title-weight", key: "blockTitleFontWeight", valueId: "style-block-title-weight-value", unit: "" },
         { id: "style-block-title-margin-bottom", key: "blockTitleMarginBottom", valueId: "style-block-title-margin-bottom-value", unit: "em" },
-        { id: "style-block-bg-opacity", key: "blockWrapperBgOpacity", valueId: "style-block-bg-opacity-value", unit: "%" },
         { id: "style-line-height", key: "lineHeight", valueId: "style-line-height-value", unit: "" },
         { id: "style-block-line-height", key: "blockLineHeight", valueId: "style-block-line-height-value", unit: "" },
         { id: "style-letter-spacing", key: "letterSpacing", valueId: "style-letter-spacing-value", unit: "em" },
@@ -3428,19 +3372,6 @@ function syncAllUIFromSettings() {
     if (headerBgGradientEl) headerBgGradientEl.checked = Boolean(settings.headerBgGradient);
     if (headerBgGradientLabelEl) headerBgGradientLabelEl.textContent = settings.headerBgGradient ? "켜짐" : "꺼짐";
     if (headerGradientOptionsEl) headerGradientOptionsEl.style.display = settings.headerBgGradient ? "block" : "none";
-
-    // 헤더 테두리 동기화
-    const headerBorderEl = document.getElementById("style-header-border");
-    const headerBorderLabelEl = document.getElementById("style-header-border-label");
-    const headerBorderOptionsEl = document.getElementById("header-border-options");
-    if (headerBorderEl) headerBorderEl.checked = Boolean(settings.headerBorder);
-    if (headerBorderLabelEl) headerBorderLabelEl.textContent = settings.headerBorder ? "켜짐" : "꺼짐";
-    if (headerBorderOptionsEl) headerBorderOptionsEl.style.display = settings.headerBorder ? "block" : "none";
-
-    const headerBorderColorEl = document.getElementById("style-header-border-color");
-    const headerBorderColorTextEl = document.getElementById("style-header-border-color-text");
-    if (headerBorderColorEl) headerBorderColorEl.value = settings.headerBorderColor;
-    if (headerBorderColorTextEl) headerBorderColorTextEl.value = settings.headerBorderColor;
 
     // 말풍선 배경 (그라데이션) 동기화
     const aiBubbleGradientEl = document.getElementById("style-ai-bubble-gradient");
