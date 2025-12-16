@@ -1298,6 +1298,58 @@ const themePresets = {
         bubbleBorderColor: "#84cc16", bgGradientColor: "#fef08a",
         imageBorderColor: "#fde047"
     },
+
+    // Light Themes (Extra)
+    "light-snow": {
+        bgColor: "#fbfdff", textColor: "#0f172a", charColor: "#0f172a",
+        boldColor: "#ef4444", italicColor: "#3b82f6", dialogueColor: "#0ea5e9", dialogueBgColor: "#e0f2fe",
+        quoteColor: "#475569", quoteBgColor: "#f1f5f9", headingColor: "#0f172a", dividerColor: "#e2e8f0",
+        badgeModelColor: "#0f172a", badgePromptColor: "#334155", badgeSubColor: "#64748b",
+        borderColor: "#e2e8f0",
+        aiBubbleColor: "#f8fafc", userBubbleColor: "#e0f2fe",
+        bubbleBorderColor: "#3b82f6", bgGradientColor: "#f1f5f9",
+        imageBorderColor: "#e2e8f0"
+    },
+    "light-tropical": {
+        bgColor: "#f7fffb", textColor: "#064e3b", charColor: "#0f766e",
+        boldColor: "#fb7185", italicColor: "#14b8a6", dialogueColor: "#0ea5e9", dialogueBgColor: "#e0f2fe",
+        quoteColor: "#0f766e", quoteBgColor: "#ccfbf1", headingColor: "#064e3b", dividerColor: "#a7f3d0",
+        badgeModelColor: "#0f766e", badgePromptColor: "#14b8a6", badgeSubColor: "#fb7185",
+        borderColor: "#a7f3d0",
+        aiBubbleColor: "#ecfdf5", userBubbleColor: "#e0f2fe",
+        bubbleBorderColor: "#14b8a6", bgGradientColor: "#ecfdf5",
+        imageBorderColor: "#a7f3d0"
+    },
+    "light-stone": {
+        bgColor: "#fafaf9", textColor: "#1c1917", charColor: "#44403c",
+        boldColor: "#dc2626", italicColor: "#2563eb", dialogueColor: "#16a34a", dialogueBgColor: "#dcfce7",
+        quoteColor: "#57534e", quoteBgColor: "#f5f5f4", headingColor: "#1c1917", dividerColor: "#e7e5e4",
+        badgeModelColor: "#1c1917", badgePromptColor: "#57534e", badgeSubColor: "#a8a29e",
+        borderColor: "#e7e5e4",
+        aiBubbleColor: "#f5f5f4", userBubbleColor: "#eff6ff",
+        bubbleBorderColor: "#2563eb", bgGradientColor: "#f5f5f4",
+        imageBorderColor: "#e7e5e4"
+    },
+    "light-sunflower": {
+        bgColor: "#fffdea", textColor: "#422006", charColor: "#854d0e",
+        boldColor: "#eab308", italicColor: "#0ea5e9", dialogueColor: "#15803d", dialogueBgColor: "#dcfce7",
+        quoteColor: "#713f12", quoteBgColor: "#fef3c7", headingColor: "#422006", dividerColor: "#fde68a",
+        badgeModelColor: "#854d0e", badgePromptColor: "#a16207", badgeSubColor: "#0ea5e9",
+        borderColor: "#fde68a",
+        aiBubbleColor: "#fef3c7", userBubbleColor: "#e0f2fe",
+        bubbleBorderColor: "#eab308", bgGradientColor: "#fef3c7",
+        imageBorderColor: "#fde68a"
+    },
+    "light-berry-soda": {
+        bgColor: "#fff5fb", textColor: "#3b0764", charColor: "#7e22ce",
+        boldColor: "#db2777", italicColor: "#8b5cf6", dialogueColor: "#4f46e5", dialogueBgColor: "#eef2ff",
+        quoteColor: "#6b21a8", quoteBgColor: "#f5d0fe", headingColor: "#3b0764", dividerColor: "#e9d5ff",
+        badgeModelColor: "#7e22ce", badgePromptColor: "#db2777", badgeSubColor: "#8b5cf6",
+        borderColor: "#e9d5ff",
+        aiBubbleColor: "#fdf4ff", userBubbleColor: "#eef2ff",
+        bubbleBorderColor: "#8b5cf6", bgGradientColor: "#fdf4ff",
+        imageBorderColor: "#e9d5ff"
+    },
     // Dark Themes
     "dark-space": {
         bgColor: "#0f172a", textColor: "#f8fafc", charColor: "#94a3b8",
@@ -1400,6 +1452,110 @@ const themePresets = {
         aiBubbleColor: "#2a0f1b", userBubbleColor: "#3f0d1d",
         bubbleBorderColor: "#fb7185", bgGradientColor: "#140a0f",
         imageBorderColor: "#3f0d1d"
+    },
+
+    // Dark Themes (Extra)
+    "dark-midnight": {
+        bgColor: "#050a1a", textColor: "#e0f2fe", charColor: "#38bdf8",
+        boldColor: "#22c55e", italicColor: "#a78bfa", dialogueColor: "#38bdf8", dialogueBgColor: "#0b1220",
+        quoteColor: "#94a3b8", quoteBgColor: "#111c33", headingColor: "#e0f2fe", dividerColor: "#1f2a44",
+        badgeModelColor: "#38bdf8", badgePromptColor: "#a78bfa", badgeSubColor: "#22c55e",
+        borderColor: "#0b1220",
+        aiBubbleColor: "#0b1220", userBubbleColor: "#111c33",
+        bubbleBorderColor: "#38bdf8", bgGradientColor: "#0b1220",
+        imageBorderColor: "#1f2a44"
+    },
+    "dark-mocha": {
+        bgColor: "#1a120b", textColor: "#fff7ed", charColor: "#fbbf24",
+        boldColor: "#fb923c", italicColor: "#fda4af", dialogueColor: "#34d399", dialogueBgColor: "#2b1a10",
+        quoteColor: "#fed7aa", quoteBgColor: "#3b2618", headingColor: "#fff7ed", dividerColor: "#3b2618",
+        badgeModelColor: "#fbbf24", badgePromptColor: "#fb923c", badgeSubColor: "#fed7aa",
+        borderColor: "#2b1a10",
+        aiBubbleColor: "#2b1a10", userBubbleColor: "#3b2618",
+        bubbleBorderColor: "#fb923c", bgGradientColor: "#1a120b",
+        imageBorderColor: "#3b2618"
+    },
+    "dark-aurora": {
+        bgColor: "#06121a", textColor: "#ecfeff", charColor: "#22d3ee",
+        boldColor: "#a3e635", italicColor: "#f472b6", dialogueColor: "#34d399", dialogueBgColor: "#0b2a2e",
+        quoteColor: "#a5f3fc", quoteBgColor: "#0f2a3a", headingColor: "#ecfeff", dividerColor: "#0f2a3a",
+        badgeModelColor: "#22d3ee", badgePromptColor: "#a3e635", badgeSubColor: "#f472b6",
+        borderColor: "#0b2a2e",
+        aiBubbleColor: "#0b2a2e", userBubbleColor: "#0f2a3a",
+        bubbleBorderColor: "#22d3ee", bgGradientColor: "#06121a",
+        imageBorderColor: "#0f2a3a"
+    },
+    "dark-volcanic": {
+        bgColor: "#0a0a0a", textColor: "#fafafa", charColor: "#fb7185",
+        boldColor: "#ef4444", italicColor: "#f59e0b", dialogueColor: "#f97316", dialogueBgColor: "#1f1f1f",
+        quoteColor: "#d4d4d8", quoteBgColor: "#262626", headingColor: "#fafafa", dividerColor: "#262626",
+        badgeModelColor: "#ef4444", badgePromptColor: "#f59e0b", badgeSubColor: "#fb7185",
+        borderColor: "#1f1f1f",
+        aiBubbleColor: "#1f1f1f", userBubbleColor: "#262626",
+        bubbleBorderColor: "#fb7185", bgGradientColor: "#0a0a0a",
+        imageBorderColor: "#262626"
+    },
+    "dark-ocean": {
+        bgColor: "#031b1f", textColor: "#e6fffb", charColor: "#5eead4",
+        boldColor: "#2dd4bf", italicColor: "#60a5fa", dialogueColor: "#22d3ee", dialogueBgColor: "#043b34",
+        quoteColor: "#a7f3d0", quoteBgColor: "#064e3b", headingColor: "#e6fffb", dividerColor: "#064e3b",
+        badgeModelColor: "#2dd4bf", badgePromptColor: "#60a5fa", badgeSubColor: "#a7f3d0",
+        borderColor: "#043b34",
+        aiBubbleColor: "#043b34", userBubbleColor: "#064e3b",
+        bubbleBorderColor: "#2dd4bf", bgGradientColor: "#031b1f",
+        imageBorderColor: "#064e3b"
+    },
+
+    // Natural Themes
+    "nature-sage": {
+        bgColor: "#f6f7f4", textColor: "#1f2937", charColor: "#365314",
+        boldColor: "#b45309", italicColor: "#0f766e", dialogueColor: "#166534", dialogueBgColor: "#e7f5ef",
+        quoteColor: "#374151", quoteBgColor: "#e7e9e1", headingColor: "#111827", dividerColor: "#d6d3c6",
+        badgeModelColor: "#365314", badgePromptColor: "#0f766e", badgeSubColor: "#b45309",
+        borderColor: "#d6d3c6",
+        aiBubbleColor: "#f3f4f0", userBubbleColor: "#e7f5ef",
+        bubbleBorderColor: "#0f766e", bgGradientColor: "#f3f4f0",
+        imageBorderColor: "#d6d3c6"
+    },
+    "nature-sand": {
+        bgColor: "#fbf6ed", textColor: "#3f2d20", charColor: "#7c5c42",
+        boldColor: "#9a3412", italicColor: "#0f766e", dialogueColor: "#92400e", dialogueBgColor: "#ffedd5",
+        quoteColor: "#5c4033", quoteBgColor: "#f3e7d6", headingColor: "#3f2d20", dividerColor: "#e7d6c1",
+        badgeModelColor: "#7c5c42", badgePromptColor: "#92400e", badgeSubColor: "#0f766e",
+        borderColor: "#e7d6c1",
+        aiBubbleColor: "#f3e7d6", userBubbleColor: "#ffedd5",
+        bubbleBorderColor: "#92400e", bgGradientColor: "#f3e7d6",
+        imageBorderColor: "#e7d6c1"
+    },
+    "nature-clay": {
+        bgColor: "#fff4ee", textColor: "#3b1d13", charColor: "#9a3412",
+        boldColor: "#c2410c", italicColor: "#0f766e", dialogueColor: "#9a3412", dialogueBgColor: "#ffe4d5",
+        quoteColor: "#6b3f2a", quoteBgColor: "#fde2d0", headingColor: "#3b1d13", dividerColor: "#f3c6ad",
+        badgeModelColor: "#9a3412", badgePromptColor: "#0f766e", badgeSubColor: "#c2410c",
+        borderColor: "#f3c6ad",
+        aiBubbleColor: "#fde2d0", userBubbleColor: "#e7f5ef",
+        bubbleBorderColor: "#c2410c", bgGradientColor: "#fde2d0",
+        imageBorderColor: "#f3c6ad"
+    },
+    "nature-river": {
+        bgColor: "#f2f7fb", textColor: "#0f172a", charColor: "#075985",
+        boldColor: "#0ea5e9", italicColor: "#0f766e", dialogueColor: "#0891b2", dialogueBgColor: "#e0f2fe",
+        quoteColor: "#334155", quoteBgColor: "#e2e8f0", headingColor: "#0f172a", dividerColor: "#cbd5e1",
+        badgeModelColor: "#075985", badgePromptColor: "#0f766e", badgeSubColor: "#64748b",
+        borderColor: "#cbd5e1",
+        aiBubbleColor: "#e2e8f0", userBubbleColor: "#e0f2fe",
+        bubbleBorderColor: "#0891b2", bgGradientColor: "#e0f2fe",
+        imageBorderColor: "#cbd5e1"
+    },
+    "nature-pine": {
+        bgColor: "#0b1a12", textColor: "#ecfdf5", charColor: "#a7f3d0",
+        boldColor: "#f59e0b", italicColor: "#34d399", dialogueColor: "#a7f3d0", dialogueBgColor: "#0f2a1b",
+        quoteColor: "#bbf7d0", quoteBgColor: "#123524", headingColor: "#ecfdf5", dividerColor: "#123524",
+        badgeModelColor: "#34d399", badgePromptColor: "#f59e0b", badgeSubColor: "#a7f3d0",
+        borderColor: "#0f2a1b",
+        aiBubbleColor: "#0f2a1b", userBubbleColor: "#123524",
+        bubbleBorderColor: "#34d399", bgGradientColor: "#0b1a12",
+        imageBorderColor: "#123524"
     },
     // Special Themes
     "special-sepia": {
