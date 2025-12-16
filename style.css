@@ -932,6 +932,13 @@ body.theme-dark .settings-tab:hover {
     flex: 1;
 }
 
+/* 디자인 탭: 색상이 많아서 3열 그리드로 표시 */
+#tab-design .design-color-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
 .setting-label {
     display: block;
     font-size: 0.75rem;
@@ -1627,19 +1634,9 @@ body.theme-dark .thumb-icon--moon {
     }
 
     /* 디자인 탭 색상 그리드 - 모바일에서 2열 */
-    #tab-design .setting-row {
-        display: grid;
+    #tab-design .design-color-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 0.5rem;
-    }
-
-    #tab-design .setting-row .setting-group {
-        flex: none;
-    }
-
-    /* 단일 항목 행은 1열로 */
-    #tab-design .setting-row:has(.setting-group:only-child) {
-        grid-template-columns: 1fr;
     }
 
     #tab-design .color-input-wrap {

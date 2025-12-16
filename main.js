@@ -487,6 +487,7 @@ function loadFromStorage() {
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
             Object.assign(settings, parsed);
+            migrateSettingsFromLoadedObject(parsed);
         }
 
         // 블록 불러오기
@@ -556,6 +557,7 @@ function loadUserPreset(name) {
     const preset = presets.find(p => p.name === name);
     if (preset) {
         Object.assign(settings, preset.settings);
+        migrateSettingsFromLoadedObject(preset.settings || {});
         syncUIFromSettings();
         updatePreview();
         saveToStorage();
@@ -1091,6 +1093,11 @@ const settings = {
     fontWeight: 400,
     containerWidth: 800,
     containerPadding: 2,
+    // 컨테이너 외부 여백(4방향) - 미리보기에서는 캔버스 패딩으로 표현
+    containerMarginTop: 0,
+    containerMarginRight: 0,
+    containerMarginBottom: 0,
+    containerMarginLeft: 0,
     borderRadius: 16,
     bubbleRadius: 16,
     bubblePadding: 1,
@@ -1113,6 +1120,8 @@ const settings = {
     bgGradient: false,
     bgGradientColor: "#e0e7ff",
     bgGradientDirection: "to bottom right",
+    bgGradientAngle: 135,
+    bgGradientRadial: false,
     // 텍스트 정렬
     textAlign: "justify",
     // 뱃지 색상 & 스타일
@@ -1121,6 +1130,7 @@ const settings = {
     badgeSubColor: "#a1a1aa",
     badgeRadius: 20,
     badgeStyle: "filled",
+    badgeScale: 1,
     // 네임태그
     nametagFontSize: 0.75,
     // 말풍선 테두리
@@ -1138,6 +1148,23 @@ const settings = {
     imageShadow: "none",
     // 커스텀 옵션
     showNametag: true,
+
+    // 헤더 배경
+    headerBgColor: "#ffffff",
+    headerBgOpacity: 100,
+    headerBgGradient: false,
+    headerBgGradientColor: "#f5f5f5",
+    headerBgGradientAngle: 135,
+
+    // 말풍선 배경(고급)
+    aiBubbleOpacity: 100,
+    aiBubbleGradient: false,
+    aiBubbleGradientColor: "#e5e7eb",
+    aiBubbleGradientAngle: 135,
+    userBubbleOpacity: 100,
+    userBubbleGradient: false,
+    userBubbleGradientColor: "#e5e7eb",
+    userBubbleGradientAngle: 135,
 };
 
 // 테마 프리셋 정의
@@ -1433,6 +1460,39 @@ const themePresets = {
     }
 };
 
+// 테마 프리셋: 헤더 배경색을 프리셋별로 더 정확하게 세팅
+// - 기본: 말풍선 색을 기준으로 헤더 배경을 맞춤
+// - 레퍼런스 프리셋: 실제 UI 느낌에 맞게 고정값 오버라이드
+Object.entries(themePresets).forEach(([_, preset]) => {
+    if (!Object.prototype.hasOwnProperty.call(preset, "headerBgColor")) {
+        preset.headerBgColor = preset.aiBubbleColor ?? preset.bgGradientColor ?? preset.bgColor;
+    }
+    if (!Object.prototype.hasOwnProperty.call(preset, "headerBgGradientColor")) {
+        preset.headerBgGradientColor = preset.userBubbleColor ?? preset.bgGradientColor ?? preset.bgColor;
+    }
+});
+
+if (themePresets["ref-instagram"]) {
+    themePresets["ref-instagram"].headerBgColor = "#ffffff";
+    themePresets["ref-instagram"].headerBgGradientColor = "#fdf2f8";
+}
+if (themePresets["ref-discord"]) {
+    themePresets["ref-discord"].headerBgColor = "#2b2d31";
+    themePresets["ref-discord"].headerBgGradientColor = "#1e1f22";
+}
+if (themePresets["ref-imessage"]) {
+    themePresets["ref-imessage"].headerBgColor = "#ffffff";
+    themePresets["ref-imessage"].headerBgGradientColor = "#f5f5f7";
+}
+if (themePresets["ref-notion"]) {
+    themePresets["ref-notion"].headerBgColor = "#ffffff";
+    themePresets["ref-notion"].headerBgGradientColor = "#fbfbfa";
+}
+if (themePresets["ref-terminal"]) {
+    themePresets["ref-terminal"].headerBgColor = "#052e16";
+    themePresets["ref-terminal"].headerBgGradientColor = "#064e3b";
+}
+
 // 색상 밝기 조절 헬퍼 (상단 이동)
 function adjustColor(hex, amount) {
     const num = parseInt(hex.replace("#", ""), 16);
@@ -1440,6 +1500,164 @@ function adjustColor(hex, amount) {
     const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + amount));
     const b = Math.min(255, Math.max(0, (num & 0x0000ff) + amount));
     return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
+function clampNumber(val, min, max) {
+    const num = Number(val);
+    if (Number.isNaN(num)) return min;
+    return Math.min(max, Math.max(min, num));
+}
+
+function normalizeAngleDegrees(val, fallback = 135) {
+    const num = Number(val);
+    if (Number.isNaN(num)) return fallback;
+    let a = num % 360;
+    if (a < 0) a += 360;
+    return a;
+}
+
+function legacyGradientDirectionToAngle(direction) {
+    switch (direction) {
+        case "to bottom":
+            return 180;
+        case "to right":
+            return 90;
+        case "to bottom left":
+            return 225;
+        case "to bottom right":
+        default:
+            return 135;
+    }
+}
+
+function hexToRgba(hex, alpha) {
+    const a = clampNumber(alpha, 0, 1);
+    if (typeof hex !== "string") return `rgba(0,0,0,${a})`;
+    if (!hex.startsWith("#") || (hex.length !== 7)) return hex;
+    const h = hex.replace("#", "");
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    if ([r, g, b].some(n => Number.isNaN(n))) return hex;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
+function applyOpacityToColor(color, opacity01) {
+    const a = clampNumber(opacity01, 0, 1);
+    if (a >= 1) return color;
+    return hexToRgba(color, a);
+}
+
+function buildLinearGradient(angleDeg, color1, color2) {
+    const angle = normalizeAngleDegrees(angleDeg, 135);
+    return `linear-gradient(${angle}deg, ${color1} 0%, ${color2} 100%)`;
+}
+
+function buildRadialGradient(color1, color2) {
+    return `radial-gradient(circle, ${color1} 0%, ${color2} 100%)`;
+}
+
+function buildContainerBackgroundCSS() {
+    if (!settings.bgGradient) return settings.bgColor;
+    if (settings.bgGradientRadial) {
+        return buildRadialGradient(settings.bgColor, settings.bgGradientColor);
+    }
+    return buildLinearGradient(settings.bgGradientAngle, settings.bgColor, settings.bgGradientColor);
+}
+
+function buildHeaderBackgroundCSS() {
+    const opacity = clampNumber((settings.headerBgOpacity ?? 100) / 100, 0, 1);
+    const base = applyOpacityToColor(settings.headerBgColor, opacity);
+    if (settings.headerBgGradient) {
+        const secondary = applyOpacityToColor(settings.headerBgGradientColor, opacity);
+        return buildLinearGradient(settings.headerBgGradientAngle, base, secondary);
+    }
+    return base;
+}
+
+function buildBubbleBackgroundCSS(isAi) {
+    const opacityKey = isAi ? "aiBubbleOpacity" : "userBubbleOpacity";
+    const gradientKey = isAi ? "aiBubbleGradient" : "userBubbleGradient";
+    const secondaryKey = isAi ? "aiBubbleGradientColor" : "userBubbleGradientColor";
+    const angleKey = isAi ? "aiBubbleGradientAngle" : "userBubbleGradientAngle";
+    const baseColor = isAi ? settings.aiBubbleColor : settings.userBubbleColor;
+
+    const opacity = clampNumber((settings[opacityKey] ?? 100) / 100, 0, 1);
+    const base = applyOpacityToColor(baseColor, opacity);
+    if (settings[gradientKey]) {
+        const secondary = applyOpacityToColor(settings[secondaryKey], opacity);
+        return buildLinearGradient(settings[angleKey], base, secondary);
+    }
+    return base;
+}
+
+function migrateSettingsFromLoadedObject(loaded) {
+    const has = (k) => Object.prototype.hasOwnProperty.call(loaded || {}, k);
+
+    // 배경 그라데이션 (방향 문자열 -> 각도/원형)
+    if (!has("bgGradientAngle") && has("bgGradientDirection")) {
+        if (loaded.bgGradientDirection === "radial") {
+            settings.bgGradientRadial = true;
+            settings.bgGradientAngle = 135;
+        } else {
+            settings.bgGradientRadial = false;
+            settings.bgGradientAngle = legacyGradientDirectionToAngle(loaded.bgGradientDirection);
+        }
+    }
+    if (!has("bgGradientRadial")) {
+        settings.bgGradientRadial = Boolean(settings.bgGradientRadial);
+    }
+    settings.bgGradientAngle = normalizeAngleDegrees(settings.bgGradientAngle, 135);
+
+    // 컨테이너 외부 여백 (이전 단일 값 -> 4방향)
+    if (!has("containerMarginTop") && has("containerOuterMargin")) {
+        const m = Number(loaded.containerOuterMargin);
+        const v = Number.isNaN(m) ? 0 : m;
+        settings.containerMarginTop = v;
+        settings.containerMarginRight = v;
+        settings.containerMarginBottom = v;
+        settings.containerMarginLeft = v;
+    }
+    settings.containerMarginTop = clampNumber(settings.containerMarginTop ?? 0, 0, 100);
+    settings.containerMarginRight = clampNumber(settings.containerMarginRight ?? 0, 0, 100);
+    settings.containerMarginBottom = clampNumber(settings.containerMarginBottom ?? 0, 0, 100);
+    settings.containerMarginLeft = clampNumber(settings.containerMarginLeft ?? 0, 0, 100);
+
+    // 뱃지 크기
+    if (!has("badgeScale")) {
+        settings.badgeScale = clampNumber(settings.badgeScale ?? 1, 0.5, 3);
+    }
+    settings.badgeScale = clampNumber(settings.badgeScale ?? 1, 0.5, 3);
+
+    // 헤더 배경 (기존: bgColor 기반 자동 그라데이션)
+    if (!has("headerBgColor")) {
+        settings.headerBgColor = adjustColor(settings.bgColor, 12);
+        settings.headerBgGradientColor = adjustColor(settings.bgColor, 6);
+        settings.headerBgGradient = true;
+        settings.headerBgOpacity = 100;
+        settings.headerBgGradientAngle = 135;
+    }
+    if (!has("headerBgOpacity")) settings.headerBgOpacity = 100;
+    if (!has("headerBgGradient")) settings.headerBgGradient = Boolean(settings.headerBgGradient);
+    if (!has("headerBgGradientColor")) settings.headerBgGradientColor = adjustColor(settings.bgColor, 6);
+    if (!has("headerBgGradientAngle")) settings.headerBgGradientAngle = 135;
+    settings.headerBgOpacity = clampNumber(settings.headerBgOpacity ?? 100, 0, 100);
+    settings.headerBgGradientAngle = normalizeAngleDegrees(settings.headerBgGradientAngle, 135);
+
+    // 말풍선 그라데이션/투명도
+    if (!has("aiBubbleOpacity")) settings.aiBubbleOpacity = 100;
+    if (!has("aiBubbleGradient")) settings.aiBubbleGradient = false;
+    if (!has("aiBubbleGradientColor")) settings.aiBubbleGradientColor = "#e5e7eb";
+    if (!has("aiBubbleGradientAngle")) settings.aiBubbleGradientAngle = 135;
+    settings.aiBubbleOpacity = clampNumber(settings.aiBubbleOpacity ?? 100, 0, 100);
+    settings.aiBubbleGradientAngle = normalizeAngleDegrees(settings.aiBubbleGradientAngle, 135);
+
+    if (!has("userBubbleOpacity")) settings.userBubbleOpacity = 100;
+    if (!has("userBubbleGradient")) settings.userBubbleGradient = false;
+    if (!has("userBubbleGradientColor")) settings.userBubbleGradientColor = "#e5e7eb";
+    if (!has("userBubbleGradientAngle")) settings.userBubbleGradientAngle = 135;
+    settings.userBubbleOpacity = clampNumber(settings.userBubbleOpacity ?? 100, 0, 100);
+    settings.userBubbleGradientAngle = normalizeAngleDegrees(settings.userBubbleGradientAngle, 135);
 }
 
 // ===== 마크다운 파싱 =====
@@ -1849,7 +2067,8 @@ function generateBubbleHTML(parsed, isForCode = false) {
     if (parsed.type === 'ai') {
         const textColor = getContrastTextColor(settings.aiBubbleColor);
         const content = parseMarkdownForBubble(parsed.content);
-        const bubbleStyle = `display: block; margin: ${bubbleMargin}; padding: ${bubblePadding}; background: ${settings.aiBubbleColor}; color: ${textColor}; border-radius: ${bubbleRadius} ${bubbleRadius} ${bubbleRadius} 0.25em; max-width: ${bubbleMaxWidth}; text-align: left; word-break: keep-all; ${bubbleBorderStyle}`;
+        const bubbleBg = buildBubbleBackgroundCSS(true);
+        const bubbleStyle = `display: block; margin: ${bubbleMargin}; padding: ${bubblePadding}; background: ${bubbleBg}; color: ${textColor}; border-radius: ${bubbleRadius} ${bubbleRadius} ${bubbleRadius} 0.25em; max-width: ${bubbleMaxWidth}; text-align: left; word-break: keep-all; ${bubbleBorderStyle}`;
         const nametagStyle = `display: block; margin-bottom: 0.375em; font-size: ${settings.nametagFontSize}em; font-weight: 600; opacity: 0.7;`;
         const charName = settings.charName || 'AI';
 
@@ -1867,7 +2086,8 @@ function generateBubbleHTML(parsed, isForCode = false) {
                 ? `border-right: ${settings.bubbleBorderWidth}px solid ${settings.bubbleBorderColor};`
                 : `border: ${settings.bubbleBorderWidth}px solid ${settings.bubbleBorderColor};`)
             : "";
-        const bubbleStyle = `display: inline-block; padding: ${bubblePadding}; background: ${settings.userBubbleColor}; color: ${textColor}; border-radius: ${bubbleRadius} ${bubbleRadius} 0.25em ${bubbleRadius}; max-width: ${bubbleMaxWidth}; text-align: left; word-break: keep-all; ${userBubbleBorderStyle}`;
+        const bubbleBg = buildBubbleBackgroundCSS(false);
+        const bubbleStyle = `display: inline-block; padding: ${bubblePadding}; background: ${bubbleBg}; color: ${textColor}; border-radius: ${bubbleRadius} ${bubbleRadius} 0.25em ${bubbleRadius}; max-width: ${bubbleMaxWidth}; text-align: left; word-break: keep-all; ${userBubbleBorderStyle}`;
         const nametagStyle = `display: block; margin-bottom: 0.375em; font-size: ${settings.nametagFontSize}em; font-weight: 600; opacity: 0.7; text-align: right;`;
         const userName = settings.userName || 'User';
 
@@ -1898,7 +2118,11 @@ function generateHTML() {
 
     // 뱃지 스타일 생성 함수
     function getBadgeStyle(color, isSubModel = false) {
-        const baseStyle = `display: inline-block; margin: 0 8px 8px 0; padding: 6px 12px; border-radius: ${settings.badgeRadius}px; font-size: 0.75em; font-weight: 600; line-height: 1.2; text-align: center; box-sizing: border-box;`;
+        const scale = clampNumber(settings.badgeScale ?? 1, 0.5, 3);
+        const paddingY = (6 * scale).toFixed(2);
+        const paddingX = (12 * scale).toFixed(2);
+        const fontSize = (0.75 * scale).toFixed(3);
+        const baseStyle = `display: inline-block; margin: 0 8px 8px 0; padding: ${paddingY}px ${paddingX}px; border-radius: ${settings.badgeRadius}px; font-size: ${fontSize}em; font-weight: 600; line-height: 1.2; text-align: center; box-sizing: border-box;`;
 
         if (settings.badgeStyle === "filled") {
             return `${baseStyle} background: ${color}; color: #fff;`;
@@ -1914,9 +2138,8 @@ function generateHTML() {
     const hasHeader = settings.logTitle || settings.charName || settings.aiModel || settings.promptName || settings.subModel;
 
     if (hasHeader) {
-        const headerBgLight = adjustColor(settings.bgColor, 12);
-        const headerBgDark = adjustColor(settings.bgColor, 6);
-        const headerStyle = `margin-bottom: 1.5em; padding: 1.5em; background: linear-gradient(135deg, ${headerBgLight} 0%, ${headerBgDark} 100%); border-radius: 16px; border: 1px solid ${adjustColor(settings.bgColor, 25)}40;`;
+        const headerBg = buildHeaderBackgroundCSS();
+        const headerStyle = `margin-bottom: 1.5em; padding: 1.5em; background: ${headerBg}; border-radius: 16px; border: 1px solid ${adjustColor(settings.bgColor, 25)}40;`;
         const headerTextAlign = settings.headerAlign;
         const justifyContent = headerTextAlign === 'center' ? 'center' : headerTextAlign === 'right' ? 'flex-end' : 'flex-start';
 
@@ -1958,7 +2181,11 @@ function generateHTML() {
         }
         if (settings.subModel) {
             // 보조 모델은 항상 outline 스타일
-            const subBadgeStyle = `display: inline-block; margin: 0 8px 8px 0; padding: 5px 11px; background: transparent; border: 1px solid ${settings.badgeSubColor}; border-radius: ${settings.badgeRadius}px; font-size: 0.75em; font-weight: 600; color: ${settings.badgeSubColor}; line-height: 1.2; text-align: center; box-sizing: border-box;`;
+            const scale = clampNumber(settings.badgeScale ?? 1, 0.5, 3);
+            const paddingY = (5 * scale).toFixed(2);
+            const paddingX = (11 * scale).toFixed(2);
+            const fontSize = (0.75 * scale).toFixed(3);
+            const subBadgeStyle = `display: inline-block; margin: 0 8px 8px 0; padding: ${paddingY}px ${paddingX}px; background: transparent; border: 1px solid ${settings.badgeSubColor}; border-radius: ${settings.badgeRadius}px; font-size: ${fontSize}em; font-weight: 600; color: ${settings.badgeSubColor}; line-height: 1.2; text-align: center; box-sizing: border-box;`;
             tags.push(`<span style="${subBadgeStyle}">${settings.subModel}</span>`);
         }
 
@@ -2023,15 +2250,7 @@ ${linesHTML}
     ];
 
     // 배경색 또는 그라데이션
-    if (settings.bgGradient) {
-        if (settings.bgGradientDirection === "radial") {
-            containerStyleParts.push(`background: radial-gradient(circle, ${settings.bgColor} 0%, ${settings.bgGradientColor} 100%)`);
-        } else {
-            containerStyleParts.push(`background: linear-gradient(${settings.bgGradientDirection}, ${settings.bgColor} 0%, ${settings.bgGradientColor} 100%)`);
-        }
-    } else {
-        containerStyleParts.push(`background: ${settings.bgColor}`);
-    }
+    containerStyleParts.push(`background: ${buildContainerBackgroundCSS()}`);
 
     // 테두리 추가
     if (settings.borderWidth > 0) {
@@ -2046,9 +2265,12 @@ ${linesHTML}
 
     const containerStyle = containerStyleParts.join("; ");
 
-    const html = `<div style="${containerStyle}">
+    const outerPadding = `${settings.containerMarginTop}em ${settings.containerMarginRight}em ${settings.containerMarginBottom}em ${settings.containerMarginLeft}em`;
+    const outerStyle = `padding: ${outerPadding}; box-sizing: border-box;`;
+
+    const html = `<div style="${outerStyle}"><div style="${containerStyle}">
 ${headerHTML}${blocksHTML}
-</div>`;
+</div></div>`;
 
     return html;
 }
@@ -2084,14 +2306,13 @@ function updatePreview() {
     previewEl.style.boxSizing = "border-box";
 
     // 배경색 또는 그라데이션
-    if (settings.bgGradient) {
-        if (settings.bgGradientDirection === "radial") {
-            previewEl.style.background = `radial-gradient(circle, ${settings.bgColor} 0%, ${settings.bgGradientColor} 100%)`;
-        } else {
-            previewEl.style.background = `linear-gradient(${settings.bgGradientDirection}, ${settings.bgColor} 0%, ${settings.bgGradientColor} 100%)`;
-        }
-    } else {
-        previewEl.style.background = settings.bgColor;
+    previewEl.style.background = buildContainerBackgroundCSS();
+
+    // 컨테이너 외부 여백(4방향) - 미리보기 캔버스 패딩으로 표현
+    const previewCanvasEl = document.getElementById('preview-canvas');
+    if (previewCanvasEl) {
+        previewCanvasEl.style.padding = `${settings.containerMarginTop}em ${settings.containerMarginRight}em ${settings.containerMarginBottom}em ${settings.containerMarginLeft}em`;
+        previewCanvasEl.style.boxSizing = "border-box";
     }
 
     // 테두리 적용
@@ -2111,7 +2332,11 @@ function updatePreview() {
 
     // 뱃지 스타일 생성 함수
     function getBadgeStyle(color) {
-        const baseStyle = `display: inline-block; margin: 0 8px 8px 0; padding: 6px 12px; border-radius: ${settings.badgeRadius}px; font-size: 0.75em; font-weight: 600; line-height: 1.2; text-align: center; box-sizing: border-box;`;
+        const scale = clampNumber(settings.badgeScale ?? 1, 0.5, 3);
+        const paddingY = (6 * scale).toFixed(2);
+        const paddingX = (12 * scale).toFixed(2);
+        const fontSize = (0.75 * scale).toFixed(3);
+        const baseStyle = `display: inline-block; margin: 0 8px 8px 0; padding: ${paddingY}px ${paddingX}px; border-radius: ${settings.badgeRadius}px; font-size: ${fontSize}em; font-weight: 600; line-height: 1.2; text-align: center; box-sizing: border-box;`;
 
         if (settings.badgeStyle === "filled") {
             return `${baseStyle} background: ${color}; color: #fff;`;
@@ -2130,8 +2355,7 @@ function updatePreview() {
         const hasHeader = settings.logTitle || settings.charName || settings.aiModel || settings.promptName || settings.subModel;
 
         if (hasHeader) {
-            const headerBgLight = adjustColor(settings.bgColor, 12);
-            const headerBgDark = adjustColor(settings.bgColor, 6);
+            const headerBg = buildHeaderBackgroundCSS();
             const borderColor = adjustColor(settings.bgColor, 25);
             const headerTextAlign = settings.headerAlign;
             const justifyContent = headerTextAlign === 'center' ? 'center' : headerTextAlign === 'right' ? 'flex-end' : 'flex-start';
@@ -2172,7 +2396,11 @@ function updatePreview() {
                 tags.push(`<span style="${getBadgeStyle(settings.badgePromptColor)}">${settings.promptName}</span>`);
             }
             if (settings.subModel) {
-                const subBadgeStyle = `display: inline-block; margin: 0 8px 8px 0; padding: 5px 11px; background: transparent; border: 1px solid ${settings.badgeSubColor}; border-radius: ${settings.badgeRadius}px; font-size: 0.75em; font-weight: 600; color: ${settings.badgeSubColor}; line-height: 1.2; text-align: center; box-sizing: border-box;`;
+                const scale = clampNumber(settings.badgeScale ?? 1, 0.5, 3);
+                const paddingY = (5 * scale).toFixed(2);
+                const paddingX = (11 * scale).toFixed(2);
+                const fontSize = (0.75 * scale).toFixed(3);
+                const subBadgeStyle = `display: inline-block; margin: 0 8px 8px 0; padding: ${paddingY}px ${paddingX}px; background: transparent; border: 1px solid ${settings.badgeSubColor}; border-radius: ${settings.badgeRadius}px; font-size: ${fontSize}em; font-weight: 600; color: ${settings.badgeSubColor}; line-height: 1.2; text-align: center; box-sizing: border-box;`;
                 tags.push(`<span style="${subBadgeStyle}">${settings.subModel}</span>`);
             }
 
@@ -2185,7 +2413,7 @@ function updatePreview() {
                 tagsHTML = `<div style="${marginTop} text-align: ${settings.headerAlign};">${tagsWithFixedMargin.join("")}</div>`;
             }
 
-            headerHTML = `<div style="margin-bottom: 1.5em; padding: 1.5em; background: linear-gradient(135deg, ${headerBgLight} 0%, ${headerBgDark} 100%); border-radius: 16px; border: 1px solid ${borderColor}40;">${charBadgeHTML}${logTitleHTML}${tagsHTML}</div>`;
+            headerHTML = `<div style="margin-bottom: 1.5em; padding: 1.5em; background: ${headerBg}; border-radius: 16px; border: 1px solid ${borderColor}40;">${charBadgeHTML}${logTitleHTML}${tagsHTML}</div>`;
         }
 
         // 블록별 HTML 생성
@@ -2331,6 +2559,14 @@ themePresetBtns.forEach(btn => {
             settings[key] = value;
         });
 
+        // 헤더 배경색도 테마 프리셋에 포함 (프리셋에 없으면 bgColor 기반으로 자동 설정)
+        if (!Object.prototype.hasOwnProperty.call(preset, "headerBgColor")) {
+            settings.headerBgColor = settings.aiBubbleColor ?? settings.bgGradientColor ?? adjustColor(settings.bgColor, 12);
+        }
+        if (!Object.prototype.hasOwnProperty.call(preset, "headerBgGradientColor")) {
+            settings.headerBgGradientColor = settings.userBubbleColor ?? settings.bgGradientColor ?? adjustColor(settings.bgColor, 6);
+        }
+
         // UI 동기화
         syncUIFromSettings();
         updatePreview();
@@ -2360,6 +2596,10 @@ function syncUIFromSettings() {
         "style-badge-sub": "badgeSubColor",
         "style-border-color": "borderColor",
         "style-gradient-color": "bgGradientColor",
+        "style-header-bg": "headerBgColor",
+        "style-header-gradient-color": "headerBgGradientColor",
+        "style-ai-bubble-gradient-color": "aiBubbleGradientColor",
+        "style-user-bubble-gradient-color": "userBubbleGradientColor",
         "style-bubble-border-color": "bubbleBorderColor",
         "style-image-border-color": "imageBorderColor",
     };
@@ -2391,6 +2631,10 @@ const colorInputs = [
     { colorId: "style-badge-prompt", textId: "style-badge-prompt-text", key: "badgePromptColor" },
     { colorId: "style-badge-sub", textId: "style-badge-sub-text", key: "badgeSubColor" },
     { colorId: "style-border-color", textId: "style-border-color-text", key: "borderColor" },
+    { colorId: "style-header-bg", textId: "style-header-bg-text", key: "headerBgColor" },
+    { colorId: "style-header-gradient-color", textId: "style-header-gradient-color-text", key: "headerBgGradientColor" },
+    { colorId: "style-ai-bubble-gradient-color", textId: "style-ai-bubble-gradient-color-text", key: "aiBubbleGradientColor" },
+    { colorId: "style-user-bubble-gradient-color", textId: "style-user-bubble-gradient-color-text", key: "userBubbleGradientColor" },
 ];
 
 colorInputs.forEach(({ colorId, textId, key }) => {
@@ -2423,6 +2667,10 @@ const rangeInputs = [
     { id: "style-font-weight", key: "fontWeight", valueId: "style-font-weight-value", unit: "" },
     { id: "style-width", key: "containerWidth", valueId: "style-width-value", unit: "px" },
     { id: "style-padding", key: "containerPadding", valueId: "style-padding-value", unit: "em" },
+    { id: "style-container-margin-top", key: "containerMarginTop", valueId: "style-container-margin-top-value", unit: "em" },
+    { id: "style-container-margin-right", key: "containerMarginRight", valueId: "style-container-margin-right-value", unit: "em" },
+    { id: "style-container-margin-bottom", key: "containerMarginBottom", valueId: "style-container-margin-bottom-value", unit: "em" },
+    { id: "style-container-margin-left", key: "containerMarginLeft", valueId: "style-container-margin-left-value", unit: "em" },
     { id: "style-radius", key: "borderRadius", valueId: "style-radius-value", unit: "px" },
     { id: "style-bubble-radius", key: "bubbleRadius", valueId: "style-bubble-radius-value", unit: "px" },
     { id: "style-bubble-padding", key: "bubblePadding", valueId: "style-bubble-padding-value", unit: "em" },
@@ -2438,6 +2686,14 @@ const rangeInputs = [
     { id: "style-nametag-size", key: "nametagFontSize", valueId: "style-nametag-size-value", unit: "em" },
     { id: "style-bubble-border-width", key: "bubbleBorderWidth", valueId: "style-bubble-border-width-value", unit: "px" },
     { id: "style-log-title-size", key: "logTitleSize", valueId: "style-log-title-size-value", unit: "em" },
+    { id: "style-badge-scale", key: "badgeScale", valueId: "style-badge-scale-value", unit: "x" },
+    { id: "style-header-bg-opacity", key: "headerBgOpacity", valueId: "style-header-bg-opacity-value", unit: "%" },
+    { id: "style-header-gradient-angle", key: "headerBgGradientAngle", valueId: "style-header-gradient-angle-value", unit: "°" },
+    { id: "style-gradient-angle", key: "bgGradientAngle", valueId: "style-gradient-angle-value", unit: "°" },
+    { id: "style-ai-bubble-opacity", key: "aiBubbleOpacity", valueId: "style-ai-bubble-opacity-value", unit: "%" },
+    { id: "style-ai-bubble-gradient-angle", key: "aiBubbleGradientAngle", valueId: "style-ai-bubble-gradient-angle-value", unit: "°" },
+    { id: "style-user-bubble-opacity", key: "userBubbleOpacity", valueId: "style-user-bubble-opacity-value", unit: "%" },
+    { id: "style-user-bubble-gradient-angle", key: "userBubbleGradientAngle", valueId: "style-user-bubble-gradient-angle-value", unit: "°" },
     // 이미지 설정
     { id: "style-image-max-width", key: "imageMaxWidth", valueId: "style-image-max-width-value", unit: "px" },
     { id: "style-image-border-radius", key: "imageBorderRadius", valueId: "style-image-border-radius-value", unit: "px" },
@@ -2452,7 +2708,15 @@ rangeInputs.forEach(({ id, key, valueId, unit }) => {
         rangeEl.addEventListener("input", (e) => {
             const val = parseFloat(e.target.value);
             settings[key] = val;
-            valueEl.textContent = `${val}${unit}`;
+            if (key === "badgeScale") {
+                valueEl.textContent = `${val.toFixed(2)}${unit}`;
+            } else if (unit === "°") {
+                valueEl.textContent = `${Math.round(val)}${unit}`;
+            } else if (unit === "%") {
+                valueEl.textContent = `${Math.round(val)}${unit}`;
+            } else {
+                valueEl.textContent = `${val}${unit}`;
+            }
             updatePreview();
             saveToStorage();
         });
@@ -2587,11 +2851,13 @@ if (imageAlignSelect) {
     });
 }
 
-// 그라데이션 방향 셀렉트
-const gradientDirectionSelect = document.getElementById("style-gradient-direction");
-if (gradientDirectionSelect) {
-    gradientDirectionSelect.addEventListener("change", (e) => {
-        settings.bgGradientDirection = e.target.value;
+// 배경 그라데이션 원형 토글
+const gradientRadialToggle = document.getElementById("style-gradient-radial");
+const gradientRadialLabel = document.getElementById("style-gradient-radial-label");
+if (gradientRadialToggle && gradientRadialLabel) {
+    gradientRadialToggle.addEventListener("change", (e) => {
+        settings.bgGradientRadial = e.target.checked;
+        gradientRadialLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
         updatePreview();
         saveToStorage();
     });
@@ -2634,6 +2900,48 @@ if (gradientColorEl && gradientColorTextEl) {
             updatePreview();
             saveToStorage();
         }
+    });
+}
+
+// 헤더 배경 그라데이션 토글
+const headerBgGradientToggle = document.getElementById("style-header-bg-gradient");
+const headerBgGradientLabel = document.getElementById("style-header-bg-gradient-label");
+const headerGradientOptions = document.getElementById("header-gradient-options");
+if (headerBgGradientToggle && headerBgGradientLabel) {
+    headerBgGradientToggle.addEventListener("change", (e) => {
+        settings.headerBgGradient = e.target.checked;
+        headerBgGradientLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
+        if (headerGradientOptions) headerGradientOptions.style.display = e.target.checked ? "block" : "none";
+        updatePreview();
+        saveToStorage();
+    });
+}
+
+// AI 말풍선 그라데이션 토글
+const aiBubbleGradientToggle = document.getElementById("style-ai-bubble-gradient");
+const aiBubbleGradientLabel = document.getElementById("style-ai-bubble-gradient-label");
+const aiBubbleGradientOptions = document.getElementById("ai-bubble-gradient-options");
+if (aiBubbleGradientToggle && aiBubbleGradientLabel) {
+    aiBubbleGradientToggle.addEventListener("change", (e) => {
+        settings.aiBubbleGradient = e.target.checked;
+        aiBubbleGradientLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
+        if (aiBubbleGradientOptions) aiBubbleGradientOptions.style.display = e.target.checked ? "block" : "none";
+        updatePreview();
+        saveToStorage();
+    });
+}
+
+// User 말풍선 그라데이션 토글
+const userBubbleGradientToggle = document.getElementById("style-user-bubble-gradient");
+const userBubbleGradientLabel = document.getElementById("style-user-bubble-gradient-label");
+const userBubbleGradientOptions = document.getElementById("user-bubble-gradient-options");
+if (userBubbleGradientToggle && userBubbleGradientLabel) {
+    userBubbleGradientToggle.addEventListener("change", (e) => {
+        settings.userBubbleGradient = e.target.checked;
+        userBubbleGradientLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
+        if (userBubbleGradientOptions) userBubbleGradientOptions.style.display = e.target.checked ? "block" : "none";
+        updatePreview();
+        saveToStorage();
     });
 }
 
@@ -2800,6 +3108,10 @@ function syncAllUIFromSettings() {
         { id: "style-font-weight", key: "fontWeight", valueId: "style-font-weight-value", unit: "" },
         { id: "style-width", key: "containerWidth", valueId: "style-width-value", unit: "px" },
         { id: "style-padding", key: "containerPadding", valueId: "style-padding-value", unit: "em" },
+        { id: "style-container-margin-top", key: "containerMarginTop", valueId: "style-container-margin-top-value", unit: "em" },
+        { id: "style-container-margin-right", key: "containerMarginRight", valueId: "style-container-margin-right-value", unit: "em" },
+        { id: "style-container-margin-bottom", key: "containerMarginBottom", valueId: "style-container-margin-bottom-value", unit: "em" },
+        { id: "style-container-margin-left", key: "containerMarginLeft", valueId: "style-container-margin-left-value", unit: "em" },
         { id: "style-radius", key: "borderRadius", valueId: "style-radius-value", unit: "px" },
         { id: "style-bubble-radius", key: "bubbleRadius", valueId: "style-bubble-radius-value", unit: "px" },
         { id: "style-bubble-padding", key: "bubblePadding", valueId: "style-bubble-padding-value", unit: "em" },
@@ -2815,6 +3127,14 @@ function syncAllUIFromSettings() {
         { id: "style-nametag-size", key: "nametagFontSize", valueId: "style-nametag-size-value", unit: "em" },
         { id: "style-bubble-border-width", key: "bubbleBorderWidth", valueId: "style-bubble-border-width-value", unit: "px" },
         { id: "style-log-title-size", key: "logTitleSize", valueId: "style-log-title-size-value", unit: "em" },
+        { id: "style-badge-scale", key: "badgeScale", valueId: "style-badge-scale-value", unit: "x" },
+        { id: "style-header-bg-opacity", key: "headerBgOpacity", valueId: "style-header-bg-opacity-value", unit: "%" },
+        { id: "style-header-gradient-angle", key: "headerBgGradientAngle", valueId: "style-header-gradient-angle-value", unit: "°" },
+        { id: "style-gradient-angle", key: "bgGradientAngle", valueId: "style-gradient-angle-value", unit: "°" },
+        { id: "style-ai-bubble-opacity", key: "aiBubbleOpacity", valueId: "style-ai-bubble-opacity-value", unit: "%" },
+        { id: "style-ai-bubble-gradient-angle", key: "aiBubbleGradientAngle", valueId: "style-ai-bubble-gradient-angle-value", unit: "°" },
+        { id: "style-user-bubble-opacity", key: "userBubbleOpacity", valueId: "style-user-bubble-opacity-value", unit: "%" },
+        { id: "style-user-bubble-gradient-angle", key: "userBubbleGradientAngle", valueId: "style-user-bubble-gradient-angle-value", unit: "°" },
         // 이미지 설정
         { id: "style-image-max-width", key: "imageMaxWidth", valueId: "style-image-max-width-value", unit: "px" },
         { id: "style-image-border-radius", key: "imageBorderRadius", valueId: "style-image-border-radius-value", unit: "px" },
@@ -2824,7 +3144,17 @@ function syncAllUIFromSettings() {
         const rangeEl = document.getElementById(id);
         const valueEl = document.getElementById(valueId);
         if (rangeEl) rangeEl.value = settings[key];
-        if (valueEl) valueEl.textContent = `${settings[key]}${unit}`;
+        if (valueEl) {
+            if (key === "badgeScale") {
+                valueEl.textContent = `${Number(settings[key]).toFixed(2)}${unit}`;
+            } else if (unit === "°") {
+                valueEl.textContent = `${Math.round(Number(settings[key]))}${unit}`;
+            } else if (unit === "%") {
+                valueEl.textContent = `${Math.round(Number(settings[key]))}${unit}`;
+            } else {
+                valueEl.textContent = `${settings[key]}${unit}`;
+            }
+        }
     });
 
     // 박스 그림자 토글 동기화
@@ -2878,8 +3208,33 @@ function syncAllUIFromSettings() {
     if (gradientColorEl) gradientColorEl.value = settings.bgGradientColor;
     if (gradientColorTextEl) gradientColorTextEl.value = settings.bgGradientColor;
 
-    const gradientDirectionEl = document.getElementById("style-gradient-direction");
-    if (gradientDirectionEl) gradientDirectionEl.value = settings.bgGradientDirection;
+    const gradientRadialEl = document.getElementById("style-gradient-radial");
+    const gradientRadialLabelEl = document.getElementById("style-gradient-radial-label");
+    if (gradientRadialEl) gradientRadialEl.checked = Boolean(settings.bgGradientRadial);
+    if (gradientRadialLabelEl) gradientRadialLabelEl.textContent = settings.bgGradientRadial ? "켜짐" : "꺼짐";
+
+    // 헤더 배경 그라데이션 동기화
+    const headerBgGradientEl = document.getElementById("style-header-bg-gradient");
+    const headerBgGradientLabelEl = document.getElementById("style-header-bg-gradient-label");
+    const headerGradientOptionsEl = document.getElementById("header-gradient-options");
+    if (headerBgGradientEl) headerBgGradientEl.checked = Boolean(settings.headerBgGradient);
+    if (headerBgGradientLabelEl) headerBgGradientLabelEl.textContent = settings.headerBgGradient ? "켜짐" : "꺼짐";
+    if (headerGradientOptionsEl) headerGradientOptionsEl.style.display = settings.headerBgGradient ? "block" : "none";
+
+    // 말풍선 배경 (그라데이션) 동기화
+    const aiBubbleGradientEl = document.getElementById("style-ai-bubble-gradient");
+    const aiBubbleGradientLabelEl = document.getElementById("style-ai-bubble-gradient-label");
+    const aiBubbleGradientOptionsEl = document.getElementById("ai-bubble-gradient-options");
+    if (aiBubbleGradientEl) aiBubbleGradientEl.checked = Boolean(settings.aiBubbleGradient);
+    if (aiBubbleGradientLabelEl) aiBubbleGradientLabelEl.textContent = settings.aiBubbleGradient ? "켜짐" : "꺼짐";
+    if (aiBubbleGradientOptionsEl) aiBubbleGradientOptionsEl.style.display = settings.aiBubbleGradient ? "block" : "none";
+
+    const userBubbleGradientEl = document.getElementById("style-user-bubble-gradient");
+    const userBubbleGradientLabelEl = document.getElementById("style-user-bubble-gradient-label");
+    const userBubbleGradientOptionsEl = document.getElementById("user-bubble-gradient-options");
+    if (userBubbleGradientEl) userBubbleGradientEl.checked = Boolean(settings.userBubbleGradient);
+    if (userBubbleGradientLabelEl) userBubbleGradientLabelEl.textContent = settings.userBubbleGradient ? "켜짐" : "꺼짐";
+    if (userBubbleGradientOptionsEl) userBubbleGradientOptionsEl.style.display = settings.userBubbleGradient ? "block" : "none";
 
     // 말풍선 테두리 동기화
     const bubbleBorderEl = document.getElementById("style-bubble-border");
@@ -3760,6 +4115,10 @@ const defaultSettings = {
     fontWeight: 400,
     containerWidth: 800,
     containerPadding: 2,
+    containerMarginTop: 0,
+    containerMarginRight: 0,
+    containerMarginBottom: 0,
+    containerMarginLeft: 0,
     borderRadius: 16,
     bubbleRadius: 16,
     bubblePadding: 1,
@@ -3779,12 +4138,15 @@ const defaultSettings = {
     bgGradient: false,
     bgGradientColor: "#e0e7ff",
     bgGradientDirection: "to bottom right",
+    bgGradientAngle: 135,
+    bgGradientRadial: false,
     textAlign: "justify",
     badgeModelColor: "#18181b",
     badgePromptColor: "#71717a",
     badgeSubColor: "#a1a1aa",
     badgeRadius: 20,
     badgeStyle: "filled",
+    badgeScale: 1,
     nametagFontSize: 0.75,
     bubbleBorder: false,
     bubbleBorderWidth: 2,
@@ -3798,6 +4160,23 @@ const defaultSettings = {
     imageBorderColor: "#e5e5e5",
     imageShadow: "none",
     showNametag: true,
+
+    // 헤더 배경
+    headerBgColor: "#ffffff",
+    headerBgOpacity: 100,
+    headerBgGradient: false,
+    headerBgGradientColor: "#f5f5f5",
+    headerBgGradientAngle: 135,
+
+    // 말풍선 배경(고급)
+    aiBubbleOpacity: 100,
+    aiBubbleGradient: false,
+    aiBubbleGradientColor: "#e5e7eb",
+    aiBubbleGradientAngle: 135,
+    userBubbleOpacity: 100,
+    userBubbleGradient: false,
+    userBubbleGradientColor: "#e5e7eb",
+    userBubbleGradientAngle: 135,
 };
 
 function resetAll() {
@@ -3870,6 +4249,7 @@ function importSettings(jsonData) {
 
         // 설정 적용
         Object.assign(settings, jsonData.settings);
+        migrateSettingsFromLoadedObject(jsonData.settings || {});
 
         // 블록 적용 (있는 경우)
         if (jsonData.blocks && Array.isArray(jsonData.blocks)) {
