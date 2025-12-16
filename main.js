@@ -1131,7 +1131,6 @@ const settings = {
     borderWidth: 0,
     borderColor: "#e4e4e7",
     borderStyle: "solid",
-    boxShadow: true,
     shadowIntensity: 30,
     // 배경 그라데이션
     bgGradient: false,
@@ -1490,6 +1489,20 @@ Object.entries(themePresets).forEach(([_, preset]) => {
     if (!Object.prototype.hasOwnProperty.call(preset, "detailsSummaryBgColor")) {
         preset.detailsSummaryBgColor = preset.quoteBgColor ?? preset.aiBubbleColor ?? preset.bgGradientColor ?? preset.bgColor;
     }
+
+    // 고급 탭: 말풍선 배경(그라데이션) 보조색도 프리셋에 포함
+    // - 프리셋에 값이 없으면, 기본 말풍선 색에서 테마 톤에 맞춰 자동 파생
+    //   (밝은 배경은 조금 어둡게, 어두운 배경은 조금 밝게)
+    if (!Object.prototype.hasOwnProperty.call(preset, "aiBubbleGradientColor")) {
+        const base = preset.aiBubbleColor ?? "#e5e7eb";
+        const amount = getContrastTextColor(base) === "#fff" ? 18 : -12;
+        preset.aiBubbleGradientColor = adjustColor(base, amount);
+    }
+    if (!Object.prototype.hasOwnProperty.call(preset, "userBubbleGradientColor")) {
+        const base = preset.userBubbleColor ?? "#e5e7eb";
+        const amount = getContrastTextColor(base) === "#fff" ? 18 : -12;
+        preset.userBubbleGradientColor = adjustColor(base, amount);
+    }
 });
 
 if (themePresets["ref-instagram"]) {
@@ -1651,6 +1664,18 @@ function migrateSettingsFromLoadedObject(loaded) {
     settings.containerMarginRight = clampNumber(settings.containerMarginRight ?? 0, 0, 100);
     settings.containerMarginBottom = clampNumber(settings.containerMarginBottom ?? 0, 0, 100);
     settings.containerMarginLeft = clampNumber(settings.containerMarginLeft ?? 0, 0, 100);
+
+    // 컨테이너 박스 그림자
+    // - 현재: shadowIntensity(0이면 box-shadow 미출력)
+    // - 레거시: boxShadow 토글(false면 shadowIntensity=0으로 변환)
+    if (!has("shadowIntensity")) settings.shadowIntensity = settings.shadowIntensity ?? 30;
+    settings.shadowIntensity = clampNumber(settings.shadowIntensity ?? 30, 0, 100);
+    if (has("boxShadow")) {
+        if (loaded.boxShadow === false) {
+            settings.shadowIntensity = 0;
+        }
+        delete settings.boxShadow;
+    }
 
     // 뱃지 크기
     if (!has("badgeScale")) {
@@ -2369,9 +2394,9 @@ ${linesHTML}
         containerStyleParts.push(`border: ${settings.borderWidth}px ${settings.borderStyle} ${settings.borderColor}`);
     }
 
-    // 그림자 추가
-    if (settings.boxShadow) {
-        const shadowOpacity = (settings.shadowIntensity / 100).toFixed(2);
+    // 그림자 추가 (0%면 속성 자체 미출력)
+    if (clampNumber(settings.shadowIntensity ?? 0, 0, 100) > 0) {
+        const shadowOpacity = (clampNumber(settings.shadowIntensity ?? 0, 0, 100) / 100).toFixed(2);
         containerStyleParts.push(`box-shadow: 0 4px 24px rgba(0, 0, 0, ${shadowOpacity})`);
     }
 
@@ -2426,12 +2451,12 @@ function updatePreview() {
         previewEl.style.border = "none";
     }
 
-    // 그림자 적용
-    if (settings.boxShadow) {
-        const shadowOpacity = (settings.shadowIntensity / 100).toFixed(2);
+    // 그림자 적용 (0%면 속성 제거)
+    if (clampNumber(settings.shadowIntensity ?? 0, 0, 100) > 0) {
+        const shadowOpacity = (clampNumber(settings.shadowIntensity ?? 0, 0, 100) / 100).toFixed(2);
         previewEl.style.boxShadow = `0 4px 24px rgba(0, 0, 0, ${shadowOpacity})`;
     } else {
-        previewEl.style.boxShadow = "none";
+        previewEl.style.boxShadow = "";
     }
 
     // 뱃지 스타일 생성 함수
@@ -2890,19 +2915,6 @@ outputTabBtns.forEach((btn) => {
     });
 });
 
-// 박스 그림자 토글
-const boxShadowToggle = document.getElementById("style-box-shadow");
-const boxShadowLabel = document.getElementById("style-box-shadow-label");
-
-if (boxShadowToggle && boxShadowLabel) {
-    boxShadowToggle.addEventListener("change", (e) => {
-        settings.boxShadow = e.target.checked;
-        boxShadowLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
-        updatePreview();
-        saveToStorage();
-    });
-}
-
 // 텍스트 정렬 셀렉트
 const textAlignSelect = document.getElementById("style-text-align");
 if (textAlignSelect) {
@@ -3308,12 +3320,6 @@ function syncAllUIFromSettings() {
             }
         }
     });
-
-    // 박스 그림자 토글 동기화
-    const boxShadowEl = document.getElementById("style-box-shadow");
-    const boxShadowLabelEl = document.getElementById("style-box-shadow-label");
-    if (boxShadowEl) boxShadowEl.checked = settings.boxShadow;
-    if (boxShadowLabelEl) boxShadowLabelEl.textContent = settings.boxShadow ? "켜짐" : "꺼짐";
 
     // 텍스트 정렬 동기화
     const textAlignEl = document.getElementById("style-text-align");
@@ -4292,7 +4298,6 @@ const defaultSettings = {
     borderWidth: 0,
     borderColor: "#e4e4e7",
     borderStyle: "solid",
-    boxShadow: true,
     shadowIntensity: 30,
     bgGradient: false,
     bgGradientColor: "#e0e7ff",
