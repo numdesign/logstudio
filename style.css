@@ -939,6 +939,17 @@ body.theme-dark .settings-tab:hover {
     gap: 0.75rem;
 }
 
+#tab-design .design-color-grid .setting-group {
+    margin-bottom: 0;
+}
+
+#tab-design .design-section-title {
+    margin: 0.25rem 0 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
 .setting-label {
     display: block;
     font-size: 0.75rem;
@@ -2025,6 +2036,13 @@ body.theme-dark .style-accordion-header:hover {
 
 /* 말풍선 테두리 옵션 영역 */
 .bubble-border-options {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border-subtle);
+}
+
+/* 헤더 테두리 옵션 영역 */
+.header-border-options {
     margin-top: 0.75rem;
     padding-top: 0.75rem;
     border-top: 1px dashed var(--border-subtle);
