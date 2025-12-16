@@ -1089,7 +1089,7 @@ const settings = {
     aiBubbleColor: "#f4f4f5",
     userBubbleColor: "#dbeafe",
     fontFamily: "Pretendard, sans-serif",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 400,
     containerWidth: 800,
     containerPadding: 2,
@@ -1099,7 +1099,7 @@ const settings = {
     // - 컨테이너 사용 안 함: 배경/테두리/둥글기/그림자 미적용 + 미리보기 캔버스 배경 흰색 고정
     disableContainerStyle: false,
     // 컨테이너 외부 여백(위/아래) - margin으로 적용
-    containerOuterMarginY: 0,
+    containerOuterMarginY: 1,
     // (레거시 호환) 4방향 외부 여백
     containerMarginTop: 0,
     containerMarginRight: 0,
@@ -1122,10 +1122,10 @@ const settings = {
     blockTitleFontWeight: 600,
     blockTitleMarginBottom: 1,
     blockTitleColor: "#71717a",
-    lineHeight: 1.8,
+    lineHeight: 1.5,
     // 나레이션/일반 문단 간격 (<p> margin-bottom)
     // - 기본값 0: 기존 출력과 동일
-    paragraphSpacing: 0,
+    paragraphSpacing: 1.5,
     // 로그 블록(섹션) 단위 줄 간격
     blockLineHeight: 1.8,
     letterSpacing: 0,
@@ -1139,7 +1139,7 @@ const settings = {
     borderWidth: 0,
     borderColor: "#e4e4e7",
     borderStyle: "solid",
-    shadowIntensity: 30,
+    shadowIntensity: 20,
     // 배경 그라데이션
     bgGradient: false,
     bgGradientColor: "#e0e7ff",
@@ -1164,7 +1164,7 @@ const settings = {
     bubbleBorderLeftOnly: false,
     // 이미지 설정
     imageMaxWidth: 500,
-    imageMargin: 0.5,
+    imageMargin: 1.5,
     imageBorderRadius: 8,
     imageAlign: "center",
     imageBorderWidth: 0,
@@ -1843,8 +1843,8 @@ function migrateSettingsFromLoadedObject(loaded) {
     // 컨테이너 박스 그림자
     // - 현재: shadowIntensity(0이면 box-shadow 미출력)
     // - 레거시: boxShadow 토글(false면 shadowIntensity=0으로 변환)
-    if (!has("shadowIntensity")) settings.shadowIntensity = settings.shadowIntensity ?? 30;
-    settings.shadowIntensity = clampNumber(settings.shadowIntensity ?? 30, 0, 100);
+    if (!has("shadowIntensity")) settings.shadowIntensity = settings.shadowIntensity ?? 20;
+    settings.shadowIntensity = clampNumber(settings.shadowIntensity ?? 20, 0, 100);
     if (has("boxShadow")) {
         if (loaded.boxShadow === false) {
             settings.shadowIntensity = 0;
