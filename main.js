@@ -1128,6 +1128,9 @@ const settings = {
     // - 100%: 꼬리 코너도 완전 둥글게(꼬리 없음)
     // - 0%: 해당 코너 완전 각지게
     smsPillTailPercent: 2,
+    // 메시지 캡슐 기능 비활성화(파싱 자체를 끔)
+    // - true면 [대괄호] 라인을 캡슐로 처리하지 않고 그대로 출력
+    smsPillDisabled: false,
     smsPillPaddingY: 0.55,
     smsPillPaddingX: 0.9,
     smsPillFontSize: 0.95,
@@ -1916,6 +1919,7 @@ function migrateSettingsFromLoadedObject(loaded) {
     if (!has("smsPillFontSize")) settings.smsPillFontSize = 0.95;
     if (!has("smsPillMaxWidth")) settings.smsPillMaxWidth = 90;
     if (!has("smsPillShadowIntensity")) settings.smsPillShadowIntensity = 0;
+    if (!has("smsPillDisabled")) settings.smsPillDisabled = false;
 
     if (!/^#[0-9A-Fa-f]{6}$/.test(String(settings.smsPillAiBgColor))) {
         settings.smsPillAiBgColor = settings.detailsSummaryBgColor ?? "#f3f4f6";
@@ -1937,6 +1941,7 @@ function migrateSettingsFromLoadedObject(loaded) {
     settings.smsPillFontSize = clampNumber(settings.smsPillFontSize ?? 0.95, 0.6, 1.5);
     settings.smsPillMaxWidth = clampNumber(settings.smsPillMaxWidth ?? 90, 40, 100);
     settings.smsPillShadowIntensity = clampNumber(settings.smsPillShadowIntensity ?? 0, 0, 100);
+    settings.smsPillDisabled = Boolean(settings.smsPillDisabled);
 
     // 레거시 키 정리
     if (has("smsPillBgColor")) delete settings.smsPillBgColor;
@@ -2199,6 +2204,7 @@ function parseBlockContent(htmlContent, isForCode = true) {
 // 라인 파싱 (마커 감지)
 function parseLine(line) {
     const trimmed = line.trim();
+    const pillDisabled = Boolean(settings.smsPillDisabled);
 
     function extractBracketMessage(text) {
         const m = text.match(/^\[(.*)\]$/);
@@ -2236,32 +2242,34 @@ function parseLine(line) {
     // << 마커: User 대사 (왼쪽 방향 화살표 = 오른쪽 정렬)
     if (trimmed.startsWith('<<')) {
         const raw = trimmed.substring(2).trim();
-        const sms = extractBracketMessage(raw);
+        const sms = pillDisabled ? null : extractBracketMessage(raw);
         return {
             type: 'user',
             content: sms ?? raw,
-            sms: sms !== null
+            sms: !pillDisabled && sms !== null
         };
     }
 
     // >> 마커: AI 대사 (오른쪽 방향 화살표 = 왼쪽 정렬)
     if (trimmed.startsWith('>>')) {
         const raw = trimmed.substring(2).trim();
-        const sms = extractBracketMessage(raw);
+        const sms = pillDisabled ? null : extractBracketMessage(raw);
         return {
             type: 'ai',
             content: sms ?? raw,
-            sms: sms !== null
+            sms: !pillDisabled && sms !== null
         };
     }
 
-    // 마커 없음 + [] 메시지: SMS/메시지 스타일
-    const sms = extractBracketMessage(trimmed);
-    if (sms !== null) {
-        return {
-            type: 'sms',
-            content: sms
-        };
+    // 마커 없음 + [] 메시지: SMS/메시지 스타일 (비활성화면 일반 텍스트로 처리)
+    if (!pillDisabled) {
+        const sms = extractBracketMessage(trimmed);
+        if (sms !== null) {
+            return {
+                type: 'sms',
+                content: sms
+            };
+        }
     }
 
     // 마커 없음: 일반 나레이션
@@ -3723,6 +3731,19 @@ if (detailsSummaryListStyleNoneToggle && detailsSummaryListStyleNoneLabel) {
     });
 }
 
+// [] 메시지(캡슐) 비활성화 토글
+const smsPillDisableToggle = document.getElementById("style-sms-pill-disable");
+const smsPillDisableLabel = document.getElementById("style-sms-pill-disable-label");
+
+if (smsPillDisableToggle && smsPillDisableLabel) {
+    smsPillDisableToggle.addEventListener("change", (e) => {
+        settings.smsPillDisabled = e.target.checked;
+        smsPillDisableLabel.textContent = e.target.checked ? "켜짐" : "꺼짐";
+        updatePreview();
+        saveToStorage();
+    });
+}
+
 // ===== 네임태그 토글 =====
 const showNametagToggle = document.getElementById("show-nametag");
 const showNametagLabel = document.getElementById("show-nametag-label");
@@ -4000,6 +4021,12 @@ function syncAllUIFromSettings() {
     const showNametagLabelEl = document.getElementById("show-nametag-label");
     if (showNametagEl) showNametagEl.checked = settings.showNametag;
     if (showNametagLabelEl) showNametagLabelEl.textContent = settings.showNametag ? "켜짐" : "꺼짐";
+
+    // [] 메시지(캡슐) 비활성화 토글 동기화
+    const smsPillDisableEl = document.getElementById("style-sms-pill-disable");
+    const smsPillDisableLabelEl = document.getElementById("style-sms-pill-disable-label");
+    if (smsPillDisableEl) smsPillDisableEl.checked = Boolean(settings.smsPillDisabled);
+    if (smsPillDisableLabelEl) smsPillDisableLabelEl.textContent = settings.smsPillDisabled ? "켜짐" : "꺼짐";
 
     // 헤더 숨기기/컨테이너 사용 안 함 토글 동기화
     const disableHeaderEl = document.getElementById("style-disable-header");
