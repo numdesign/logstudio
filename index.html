@@ -517,6 +517,133 @@
                 </div>
               </div>
             </div>
+
+            <div class="setting-divider"></div>
+
+            <div class="design-section-title">메시지 캡슐</div>
+
+            <div class="setting-group">
+              <label class="setting-label">캡슐 프리셋</label>
+              <div class="theme-preset-wrap">
+                <button type="button" class="theme-preset active" data-pill="pill-minimal" title="미니멀">
+                  <span class="preset-swatch" style="background:#f3f4f6; border: 1px solid #d1d5db;"></span>
+                </button>
+                <button type="button" class="theme-preset" data-pill="pill-ios-soft" title="iMessage 레퍼런스 (소프트)">
+                  <span class="preset-swatch" style="background:#eef2ff; border: 1px solid #c7d2fe;"></span>
+                </button>
+                <button type="button" class="theme-preset" data-pill="pill-discord-dark" title="디스코드 레퍼런스 (다크)">
+                  <span class="preset-swatch" style="background:#2b2d31; border: 1px solid #3f4148;"></span>
+                </button>
+                <button type="button" class="theme-preset" data-pill="pill-kakao-soft" title="카카오톡 레퍼런스 (소프트)">
+                  <span class="preset-swatch" style="background:#fef9c3; border: 1px solid #fde047;"></span>
+                </button>
+                <button type="button" class="theme-preset" data-pill="pill-instagram-warm" title="인스타그램 레퍼런스 (웜)">
+                  <span class="preset-swatch" style="background:#fff1f2; border: 1px solid #fbcfe8;"></span>
+                </button>
+                <button type="button" class="theme-preset" data-pill="pill-facebook-clean" title="페이스북/메신저 레퍼런스 (클린)">
+                  <span class="preset-swatch" style="background:#eff6ff; border: 1px solid #bfdbfe;"></span>
+                </button>
+                <button type="button" class="theme-preset" data-pill="pill-telegram-airy" title="텔레그램 레퍼런스 (에어리)">
+                  <span class="preset-swatch" style="background:#ecfeff; border: 1px solid #a5f3fc;"></span>
+                </button>
+                <button type="button" class="theme-preset" data-pill="pill-outline" title="아웃라인">
+                  <span class="preset-swatch" style="background:#ffffff; border: 2px solid #d1d5db;"></span>
+                </button>
+                <button type="button" class="theme-preset" data-pill="pill-glass" title="글래시(소프트)">
+                  <span class="preset-swatch" style="background:#f5f3ff; border: 1px solid #ddd6fe;"></span>
+                </button>
+                <button type="button" class="theme-preset" data-pill="pill-terminal" title="터미널(레퍼런스)">
+                  <span class="preset-swatch" style="background:#111827; border: 1px solid #374151;"></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="design-color-grid">
+              <div class="setting-group">
+                <label class="setting-label">캡슐 배경색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-sms-pill-bg" value="#f3f4f6">
+                  <input type="text" class="setting-input setting-input--color" id="style-sms-pill-bg-text"
+                    value="#f3f4f6">
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">캡슐 테두리 색</label>
+                <div class="color-input-wrap">
+                  <input type="color" class="setting-color" id="style-sms-pill-border" value="#d1d5db">
+                  <input type="text" class="setting-input setting-input--color" id="style-sms-pill-border-text"
+                    value="#d1d5db">
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">테두리 두께</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-sms-pill-border-width" min="0" max="8" step="1"
+                    value="1">
+                  <span class="range-value" id="style-sms-pill-border-width-value">1px</span>
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">둥글기</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-sms-pill-radius" min="0" max="999" step="1"
+                    value="999">
+                  <span class="range-value" id="style-sms-pill-radius-value">999px</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">세로 여백</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-sms-pill-padding-y" min="0" max="3" step="0.05"
+                    value="0.55">
+                  <span class="range-value" id="style-sms-pill-padding-y-value">0.55em</span>
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">가로 여백</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-sms-pill-padding-x" min="0" max="5" step="0.05"
+                    value="0.9">
+                  <span class="range-value" id="style-sms-pill-padding-x-value">0.9em</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">글자 크기</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-sms-pill-font-size" min="0.6" max="1.5"
+                    step="0.01" value="0.95">
+                  <span class="range-value" id="style-sms-pill-font-size-value">0.95em</span>
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="setting-label">최대 너비</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-sms-pill-max-width" min="40" max="100" step="1"
+                    value="90">
+                  <span class="range-value" id="style-sms-pill-max-width-value">90%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-group">
+                <label class="setting-label">그림자</label>
+                <div class="range-input-wrap">
+                  <input type="range" class="setting-range" id="style-sms-pill-shadow" min="0" max="100" step="5"
+                    value="0">
+                  <span class="range-value" id="style-sms-pill-shadow-value">0%</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- 스타일 탭 -->

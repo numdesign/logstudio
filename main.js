@@ -1114,6 +1114,17 @@ const settings = {
     detailsSummaryFontSize: 1,
     detailsSummaryListStyleNone: true,
     detailsSummaryBgColor: "#f3f4f6",
+
+    // [] 메시지(캡슐) 스타일
+    smsPillBgColor: "#f3f4f6",
+    smsPillBorderColor: "#d1d5db",
+    smsPillBorderWidth: 1,
+    smsPillRadius: 999,
+    smsPillPaddingY: 0.55,
+    smsPillPaddingX: 0.9,
+    smsPillFontSize: 0.95,
+    smsPillMaxWidth: 90,
+    smsPillShadowIntensity: 0,
     // 로그 블록
     blockTitleFontSize: 0.75,
     blockTitleFontWeight: 600,
@@ -1869,6 +1880,31 @@ function migrateSettingsFromLoadedObject(loaded) {
         settings.detailsSummaryBgColor = settings.quoteBgColor ?? adjustColor(settings.bgColor, 10);
     }
 
+    // [] 메시지(캡슐) 스타일
+    if (!has("smsPillBgColor")) settings.smsPillBgColor = settings.detailsSummaryBgColor ?? "#f3f4f6";
+    if (!has("smsPillBorderColor")) settings.smsPillBorderColor = settings.dividerColor ?? "#d1d5db";
+    if (!has("smsPillBorderWidth")) settings.smsPillBorderWidth = 1;
+    if (!has("smsPillRadius")) settings.smsPillRadius = 999;
+    if (!has("smsPillPaddingY")) settings.smsPillPaddingY = 0.55;
+    if (!has("smsPillPaddingX")) settings.smsPillPaddingX = 0.9;
+    if (!has("smsPillFontSize")) settings.smsPillFontSize = 0.95;
+    if (!has("smsPillMaxWidth")) settings.smsPillMaxWidth = 90;
+    if (!has("smsPillShadowIntensity")) settings.smsPillShadowIntensity = 0;
+
+    if (!/^#[0-9A-Fa-f]{6}$/.test(String(settings.smsPillBgColor))) {
+        settings.smsPillBgColor = settings.detailsSummaryBgColor ?? "#f3f4f6";
+    }
+    if (!/^#[0-9A-Fa-f]{6}$/.test(String(settings.smsPillBorderColor))) {
+        settings.smsPillBorderColor = settings.dividerColor ?? "#d1d5db";
+    }
+    settings.smsPillBorderWidth = clampNumber(settings.smsPillBorderWidth ?? 1, 0, 8);
+    settings.smsPillRadius = clampNumber(settings.smsPillRadius ?? 999, 0, 999);
+    settings.smsPillPaddingY = clampNumber(settings.smsPillPaddingY ?? 0.55, 0, 3);
+    settings.smsPillPaddingX = clampNumber(settings.smsPillPaddingX ?? 0.9, 0, 5);
+    settings.smsPillFontSize = clampNumber(settings.smsPillFontSize ?? 0.95, 0.6, 1.5);
+    settings.smsPillMaxWidth = clampNumber(settings.smsPillMaxWidth ?? 90, 40, 100);
+    settings.smsPillShadowIntensity = clampNumber(settings.smsPillShadowIntensity ?? 0, 0, 100);
+
     // 로그 블록 (제목)
     if (!has("blockTitleFontSize")) settings.blockTitleFontSize = 0.75;
     if (!has("blockTitleFontWeight")) settings.blockTitleFontWeight = 600;
@@ -2126,6 +2162,12 @@ function parseBlockContent(htmlContent, isForCode = true) {
 function parseLine(line) {
     const trimmed = line.trim();
 
+    function extractBracketMessage(text) {
+        const m = text.match(/^\[(.*)\]$/);
+        if (!m) return null;
+        return (m[1] ?? '').trim();
+    }
+
     // 빈 줄(연속 개행 포함) 유지
     if (trimmed === '') {
         return {
@@ -2155,17 +2197,32 @@ function parseLine(line) {
 
     // << 마커: User 대사 (왼쪽 방향 화살표 = 오른쪽 정렬)
     if (trimmed.startsWith('<<')) {
+        const raw = trimmed.substring(2).trim();
+        const sms = extractBracketMessage(raw);
         return {
             type: 'user',
-            content: trimmed.substring(2).trim()
+            content: sms ?? raw,
+            sms: sms !== null
         };
     }
 
     // >> 마커: AI 대사 (오른쪽 방향 화살표 = 왼쪽 정렬)
     if (trimmed.startsWith('>>')) {
+        const raw = trimmed.substring(2).trim();
+        const sms = extractBracketMessage(raw);
         return {
             type: 'ai',
-            content: trimmed.substring(2).trim()
+            content: sms ?? raw,
+            sms: sms !== null
+        };
+    }
+
+    // 마커 없음 + [] 메시지: SMS/메시지 스타일
+    const sms = extractBracketMessage(trimmed);
+    if (sms !== null) {
+        return {
+            type: 'sms',
+            content: sms
         };
     }
 
@@ -2321,13 +2378,36 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
     const bubbleRadius = `${settings.bubbleRadius}px`;
     const bubbleMaxWidth = `${settings.bubbleMaxWidth}%`;
     const prevType = context?.prevType;
-    const bubbleTopGap = (prevType === 'narration' || prevType === 'heading' || prevType === 'image') ? settings.bubbleGap : 0;
+    const bubbleTopGap = (prevType === 'narration' || prevType === 'heading' || prevType === 'image' || prevType === 'sms') ? settings.bubbleGap : 0;
     const bubbleMargin = `${bubbleTopGap}em 0 ${settings.bubbleGap}em 0`;
 
     // 빈 줄: 입력한 개행을 실제 높이로 보존
     if (parsed.type === 'blank') {
         const lh = clampNumber(settings.lineHeight ?? 1.5, 0.8, 3);
         return `${indent}<div style="height: ${lh}em;"></div>`;
+    }
+
+    // [] 메시지: SMS 스타일 (가운데 정렬)
+    if (parsed.type === 'sms') {
+        const bg = settings.smsPillBgColor;
+        const borderColor = settings.smsPillBorderColor;
+        const borderWidth = clampNumber(settings.smsPillBorderWidth ?? 1, 0, 8);
+        const radius = clampNumber(settings.smsPillRadius ?? 999, 0, 999);
+        const paddingY = clampNumber(settings.smsPillPaddingY ?? 0.55, 0, 3);
+        const paddingX = clampNumber(settings.smsPillPaddingX ?? 0.9, 0, 5);
+        const maxWidth = clampNumber(settings.smsPillMaxWidth ?? 90, 40, 100);
+        const fontSize = clampNumber(settings.smsPillFontSize ?? 0.95, 0.6, 1.5);
+        const shadowIntensity = clampNumber(settings.smsPillShadowIntensity ?? 0, 0, 100);
+
+        const textColor = getContrastTextColor(bg);
+        const shadowOpacity = (shadowIntensity / 100 * 0.18).toFixed(3);
+        const shadowStyle = shadowIntensity > 0 ? ` box-shadow: 0 6px 18px rgba(0,0,0,${shadowOpacity});` : '';
+
+        // [메시지] (마커 없음)은 왼쪽 정렬
+        const wrapperStyle = `display: block; text-align: left; margin: ${bubbleMargin};`;
+        const pillStyle = `display: inline-block; padding: ${paddingY}em ${paddingX}em; background: ${bg}; color: ${textColor}; border: ${borderWidth}px solid ${borderColor}; border-radius: ${radius}px; max-width: ${maxWidth}%; font-size: ${fontSize}em; line-height: 1.35; word-break: keep-all;${shadowStyle}`;
+        const content = parseMarkdownForBubble(parsed.content);
+        return `${indent}<div style="${wrapperStyle}"><div style="${pillStyle}">${content}</div></div>`;
     }
 
     // 말풍선 테두리 스타일
@@ -2376,6 +2456,26 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
     }
 
     if (parsed.type === 'ai') {
+        if (parsed.sms) {
+            const bg = settings.smsPillBgColor;
+            const borderColor = settings.smsPillBorderColor;
+            const borderWidth = clampNumber(settings.smsPillBorderWidth ?? 1, 0, 8);
+            const radius = clampNumber(settings.smsPillRadius ?? 999, 0, 999);
+            const paddingY = clampNumber(settings.smsPillPaddingY ?? 0.55, 0, 3);
+            const paddingX = clampNumber(settings.smsPillPaddingX ?? 0.9, 0, 5);
+            const maxWidth = clampNumber(settings.smsPillMaxWidth ?? 90, 40, 100);
+            const fontSize = clampNumber(settings.smsPillFontSize ?? 0.95, 0.6, 1.5);
+            const shadowIntensity = clampNumber(settings.smsPillShadowIntensity ?? 0, 0, 100);
+
+            const smsTextColor = getContrastTextColor(bg);
+            const shadowOpacity = (shadowIntensity / 100 * 0.18).toFixed(3);
+            const shadowStyle = shadowIntensity > 0 ? ` box-shadow: 0 6px 18px rgba(0,0,0,${shadowOpacity});` : '';
+
+            const content = parseMarkdownForBubble(parsed.content);
+            const wrapperStyle = `display: block; text-align: left; margin: ${bubbleMargin};`;
+            const pillStyle = `display: inline-block; padding: ${paddingY}em ${paddingX}em; background: ${bg}; color: ${smsTextColor}; border: ${borderWidth}px solid ${borderColor}; border-radius: ${radius}px; max-width: ${maxWidth}%; font-size: ${fontSize}em; line-height: 1.35; word-break: keep-all;${shadowStyle}`;
+            return `${indent}<div style="${wrapperStyle}"><div style="${pillStyle}">${content}</div></div>`;
+        }
         const textColor = getContrastTextColor(settings.aiBubbleColor);
         const content = parseMarkdownForBubble(parsed.content);
         const wrapperStyle = `display: block; text-align: left; margin: ${bubbleMargin};`;
@@ -2390,6 +2490,26 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
             return `${indent}<div style="${wrapperStyle}"><div style="${bubbleStyle}">${content}</div></div>`;
         }
     } else if (parsed.type === 'user') {
+        if (parsed.sms) {
+            const bg = settings.smsPillBgColor;
+            const borderColor = settings.smsPillBorderColor;
+            const borderWidth = clampNumber(settings.smsPillBorderWidth ?? 1, 0, 8);
+            const radius = clampNumber(settings.smsPillRadius ?? 999, 0, 999);
+            const paddingY = clampNumber(settings.smsPillPaddingY ?? 0.55, 0, 3);
+            const paddingX = clampNumber(settings.smsPillPaddingX ?? 0.9, 0, 5);
+            const maxWidth = clampNumber(settings.smsPillMaxWidth ?? 90, 40, 100);
+            const fontSize = clampNumber(settings.smsPillFontSize ?? 0.95, 0.6, 1.5);
+            const shadowIntensity = clampNumber(settings.smsPillShadowIntensity ?? 0, 0, 100);
+
+            const smsTextColor = getContrastTextColor(bg);
+            const shadowOpacity = (shadowIntensity / 100 * 0.18).toFixed(3);
+            const shadowStyle = shadowIntensity > 0 ? ` box-shadow: 0 6px 18px rgba(0,0,0,${shadowOpacity});` : '';
+
+            const content = parseMarkdownForBubble(parsed.content);
+            const wrapperStyle = `display: block; text-align: right; margin: ${bubbleMargin};`;
+            const pillStyle = `display: inline-block; padding: ${paddingY}em ${paddingX}em; background: ${bg}; color: ${smsTextColor}; border: ${borderWidth}px solid ${borderColor}; border-radius: ${radius}px; max-width: ${maxWidth}%; font-size: ${fontSize}em; line-height: 1.35; word-break: keep-all;${shadowStyle}`;
+            return `${indent}<div style="${wrapperStyle}"><div style="${pillStyle}">${content}</div></div>`;
+        }
         const textColor = getContrastTextColor(settings.userBubbleColor);
         const content = parseMarkdownForBubble(parsed.content);
         const wrapperStyle = `display: block; text-align: right; margin: ${bubbleMargin};`;
@@ -2895,7 +3015,7 @@ setupDropdown("ai-model", "ai-model-dropdown", "aiModel");
 setupDropdown("sub-model", "sub-model-dropdown", "subModel");
 
 // 테마 프리셋 버튼
-const themePresetBtns = document.querySelectorAll(".theme-preset");
+const themePresetBtns = document.querySelectorAll(".theme-preset[data-theme]");
 themePresetBtns.forEach(btn => {
     btn.addEventListener("click", () => {
         const themeName = btn.dataset.theme;
@@ -2924,6 +3044,142 @@ themePresetBtns.forEach(btn => {
 
         // UI 동기화
         syncUIFromSettings();
+        updatePreview();
+        saveToStorage();
+    });
+});
+
+// [] 메시지(캡슐) 프리셋
+const smsPillPresets = {
+    // NOTE: 특정 앱 UI를 그대로 복제하지 않고 "레퍼런스 감성"만 반영한 프리셋
+    "pill-minimal": {
+        smsPillBgColor: "#f3f4f6",
+        smsPillBorderColor: "#d1d5db",
+        smsPillBorderWidth: 1,
+        smsPillRadius: 999,
+        smsPillPaddingY: 0.55,
+        smsPillPaddingX: 0.9,
+        smsPillFontSize: 0.95,
+        smsPillMaxWidth: 90,
+        smsPillShadowIntensity: 0,
+    },
+    "pill-ios-soft": {
+        smsPillBgColor: "#eef2ff",
+        smsPillBorderColor: "#c7d2fe",
+        smsPillBorderWidth: 1,
+        smsPillRadius: 999,
+        smsPillPaddingY: 0.6,
+        smsPillPaddingX: 1.0,
+        smsPillFontSize: 0.95,
+        smsPillMaxWidth: 92,
+        smsPillShadowIntensity: 10,
+    },
+    "pill-discord-dark": {
+        smsPillBgColor: "#2b2d31",
+        smsPillBorderColor: "#3f4148",
+        smsPillBorderWidth: 1,
+        smsPillRadius: 14,
+        smsPillPaddingY: 0.55,
+        smsPillPaddingX: 0.95,
+        smsPillFontSize: 0.95,
+        smsPillMaxWidth: 92,
+        smsPillShadowIntensity: 15,
+    },
+    "pill-kakao-soft": {
+        smsPillBgColor: "#fef9c3",
+        smsPillBorderColor: "#fde047",
+        smsPillBorderWidth: 1,
+        smsPillRadius: 18,
+        smsPillPaddingY: 0.55,
+        smsPillPaddingX: 0.95,
+        smsPillFontSize: 0.95,
+        smsPillMaxWidth: 92,
+        smsPillShadowIntensity: 8,
+    },
+    "pill-instagram-warm": {
+        smsPillBgColor: "#fff1f2",
+        smsPillBorderColor: "#fbcfe8",
+        smsPillBorderWidth: 1,
+        smsPillRadius: 999,
+        smsPillPaddingY: 0.6,
+        smsPillPaddingX: 1.0,
+        smsPillFontSize: 0.95,
+        smsPillMaxWidth: 92,
+        smsPillShadowIntensity: 10,
+    },
+    "pill-facebook-clean": {
+        smsPillBgColor: "#eff6ff",
+        smsPillBorderColor: "#bfdbfe",
+        smsPillBorderWidth: 1,
+        smsPillRadius: 16,
+        smsPillPaddingY: 0.55,
+        smsPillPaddingX: 0.95,
+        smsPillFontSize: 0.95,
+        smsPillMaxWidth: 92,
+        smsPillShadowIntensity: 6,
+    },
+    "pill-telegram-airy": {
+        smsPillBgColor: "#ecfeff",
+        smsPillBorderColor: "#a5f3fc",
+        smsPillBorderWidth: 1,
+        smsPillRadius: 999,
+        smsPillPaddingY: 0.55,
+        smsPillPaddingX: 0.95,
+        smsPillFontSize: 0.95,
+        smsPillMaxWidth: 92,
+        smsPillShadowIntensity: 8,
+    },
+    "pill-outline": {
+        smsPillBgColor: "#ffffff",
+        smsPillBorderColor: "#d1d5db",
+        smsPillBorderWidth: 2,
+        smsPillRadius: 999,
+        smsPillPaddingY: 0.5,
+        smsPillPaddingX: 0.9,
+        smsPillFontSize: 0.95,
+        smsPillMaxWidth: 92,
+        smsPillShadowIntensity: 0,
+    },
+    "pill-glass": {
+        smsPillBgColor: "#f5f3ff",
+        smsPillBorderColor: "#ddd6fe",
+        smsPillBorderWidth: 1,
+        smsPillRadius: 999,
+        smsPillPaddingY: 0.6,
+        smsPillPaddingX: 1.05,
+        smsPillFontSize: 0.95,
+        smsPillMaxWidth: 92,
+        smsPillShadowIntensity: 18,
+    },
+    "pill-terminal": {
+        smsPillBgColor: "#111827",
+        smsPillBorderColor: "#374151",
+        smsPillBorderWidth: 1,
+        smsPillRadius: 10,
+        smsPillPaddingY: 0.5,
+        smsPillPaddingX: 0.85,
+        smsPillFontSize: 0.92,
+        smsPillMaxWidth: 95,
+        smsPillShadowIntensity: 0,
+    },
+};
+
+const smsPillPresetBtns = document.querySelectorAll('.theme-preset[data-pill]');
+smsPillPresetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const presetName = btn.dataset.pill;
+        const preset = smsPillPresets[presetName];
+        if (!preset) return;
+
+        smsPillPresetBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        Object.entries(preset).forEach(([key, value]) => {
+            settings[key] = value;
+        });
+
+        syncUIFromSettings();
+        syncAllUIFromSettings();
         updatePreview();
         saveToStorage();
     });
@@ -2959,6 +3215,10 @@ function syncUIFromSettings() {
         "style-user-bubble-gradient-color": "userBubbleGradientColor",
         "style-bubble-border-color": "bubbleBorderColor",
         "style-image-border-color": "imageBorderColor",
+
+        // [] 메시지(캡슐)
+        "style-sms-pill-bg": "smsPillBgColor",
+        "style-sms-pill-border": "smsPillBorderColor",
     };
 
     Object.entries(colorMap).forEach(([id, key]) => {
@@ -2994,6 +3254,10 @@ const colorInputs = [
     { colorId: "style-header-gradient-color", textId: "style-header-gradient-color-text", key: "headerBgGradientColor" },
     { colorId: "style-ai-bubble-gradient-color", textId: "style-ai-bubble-gradient-color-text", key: "aiBubbleGradientColor" },
     { colorId: "style-user-bubble-gradient-color", textId: "style-user-bubble-gradient-color-text", key: "userBubbleGradientColor" },
+
+    // [] 메시지(캡슐)
+    { colorId: "style-sms-pill-bg", textId: "style-sms-pill-bg-text", key: "smsPillBgColor" },
+    { colorId: "style-sms-pill-border", textId: "style-sms-pill-border-text", key: "smsPillBorderColor" },
 ];
 
 colorInputs.forEach(({ colorId, textId, key }) => {
@@ -3063,6 +3327,15 @@ const rangeInputs = [
     { id: "style-image-max-width", key: "imageMaxWidth", valueId: "style-image-max-width-value", unit: "px" },
     { id: "style-image-border-radius", key: "imageBorderRadius", valueId: "style-image-border-radius-value", unit: "px" },
     { id: "style-image-margin", key: "imageMargin", valueId: "style-image-margin-value", unit: "em" },
+
+    // [] 메시지(캡슐)
+    { id: "style-sms-pill-border-width", key: "smsPillBorderWidth", valueId: "style-sms-pill-border-width-value", unit: "px" },
+    { id: "style-sms-pill-radius", key: "smsPillRadius", valueId: "style-sms-pill-radius-value", unit: "px" },
+    { id: "style-sms-pill-padding-y", key: "smsPillPaddingY", valueId: "style-sms-pill-padding-y-value", unit: "em" },
+    { id: "style-sms-pill-padding-x", key: "smsPillPaddingX", valueId: "style-sms-pill-padding-x-value", unit: "em" },
+    { id: "style-sms-pill-font-size", key: "smsPillFontSize", valueId: "style-sms-pill-font-size-value", unit: "em" },
+    { id: "style-sms-pill-max-width", key: "smsPillMaxWidth", valueId: "style-sms-pill-max-width-value", unit: "%" },
+    { id: "style-sms-pill-shadow", key: "smsPillShadowIntensity", valueId: "style-sms-pill-shadow-value", unit: "%" },
 ];
 
 rangeInputs.forEach(({ id, key, valueId, unit }) => {
@@ -3534,6 +3807,15 @@ function syncAllUIFromSettings() {
         { id: "style-image-max-width", key: "imageMaxWidth", valueId: "style-image-max-width-value", unit: "px" },
         { id: "style-image-border-radius", key: "imageBorderRadius", valueId: "style-image-border-radius-value", unit: "px" },
         { id: "style-image-margin", key: "imageMargin", valueId: "style-image-margin-value", unit: "em" },
+
+        // [] 메시지(캡슐)
+        { id: "style-sms-pill-border-width", key: "smsPillBorderWidth", valueId: "style-sms-pill-border-width-value", unit: "px" },
+        { id: "style-sms-pill-radius", key: "smsPillRadius", valueId: "style-sms-pill-radius-value", unit: "px" },
+        { id: "style-sms-pill-padding-y", key: "smsPillPaddingY", valueId: "style-sms-pill-padding-y-value", unit: "em" },
+        { id: "style-sms-pill-padding-x", key: "smsPillPaddingX", valueId: "style-sms-pill-padding-x-value", unit: "em" },
+        { id: "style-sms-pill-font-size", key: "smsPillFontSize", valueId: "style-sms-pill-font-size-value", unit: "em" },
+        { id: "style-sms-pill-max-width", key: "smsPillMaxWidth", valueId: "style-sms-pill-max-width-value", unit: "%" },
+        { id: "style-sms-pill-shadow", key: "smsPillShadowIntensity", valueId: "style-sms-pill-shadow-value", unit: "%" },
     ];
     rangeMap.forEach(({ id, key, valueId, unit }) => {
         const rangeEl = document.getElementById(id);
