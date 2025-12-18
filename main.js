@@ -1123,8 +1123,11 @@ const settings = {
     smsPillUserBgColor: "#dbeafe",
     smsPillUserBorderColor: "#bfdbfe",
     smsPillBorderWidth: 1,
-    smsPillRadius: 999,
-    smsPillTailRadius: 14,
+    smsPillRadius: 28,
+    // 꼬리 코너(%) = (tailPx / radiusPx) * 100
+    // - 100%: 꼬리 코너도 완전 둥글게(꼬리 없음)
+    // - 0%: 해당 코너 완전 각지게
+    smsPillTailPercent: 2,
     smsPillPaddingY: 0.55,
     smsPillPaddingX: 0.9,
     smsPillFontSize: 0.95,
@@ -1896,8 +1899,18 @@ function migrateSettingsFromLoadedObject(loaded) {
     if (!has("smsPillUserBorderColor")) settings.smsPillUserBorderColor = legacyPillBorder ?? settings.dividerColor ?? "#bfdbfe";
 
     if (!has("smsPillBorderWidth")) settings.smsPillBorderWidth = 1;
-    if (!has("smsPillRadius")) settings.smsPillRadius = 999;
-    if (!has("smsPillTailRadius")) settings.smsPillTailRadius = 14;
+    if (!has("smsPillRadius")) settings.smsPillRadius = 28;
+    // 레거시: smsPillTailRadius(px) -> smsPillTailPercent(%)
+    if (!has("smsPillTailPercent")) {
+        const loadedRadius = clampNumber(settings.smsPillRadius ?? 28, 0, 40);
+        const legacyTailPx = has("smsPillTailRadius") ? Number(loaded.smsPillTailRadius) : undefined;
+        if (typeof legacyTailPx === 'number' && Number.isFinite(legacyTailPx) && loadedRadius > 0) {
+            const legacyTailClamped = clampNumber(legacyTailPx, 0, loadedRadius);
+            settings.smsPillTailPercent = clampNumber(Math.round((legacyTailClamped / loadedRadius) * 100), 0, 100);
+        } else {
+            settings.smsPillTailPercent = 2;
+        }
+    }
     if (!has("smsPillPaddingY")) settings.smsPillPaddingY = 0.55;
     if (!has("smsPillPaddingX")) settings.smsPillPaddingX = 0.9;
     if (!has("smsPillFontSize")) settings.smsPillFontSize = 0.95;
@@ -1917,8 +1930,8 @@ function migrateSettingsFromLoadedObject(loaded) {
         settings.smsPillUserBorderColor = settings.dividerColor ?? "#bfdbfe";
     }
     settings.smsPillBorderWidth = clampNumber(settings.smsPillBorderWidth ?? 1, 0, 8);
-    settings.smsPillRadius = clampNumber(settings.smsPillRadius ?? 999, 0, 999);
-    settings.smsPillTailRadius = clampNumber(settings.smsPillTailRadius ?? 14, 0, settings.smsPillRadius ?? 999);
+    settings.smsPillRadius = clampNumber(settings.smsPillRadius ?? 28, 0, 40);
+    settings.smsPillTailPercent = clampNumber(settings.smsPillTailPercent ?? 2, 0, 100);
     settings.smsPillPaddingY = clampNumber(settings.smsPillPaddingY ?? 0.55, 0, 3);
     settings.smsPillPaddingX = clampNumber(settings.smsPillPaddingX ?? 0.9, 0, 5);
     settings.smsPillFontSize = clampNumber(settings.smsPillFontSize ?? 0.95, 0.6, 1.5);
@@ -1928,6 +1941,7 @@ function migrateSettingsFromLoadedObject(loaded) {
     // 레거시 키 정리
     if (has("smsPillBgColor")) delete settings.smsPillBgColor;
     if (has("smsPillBorderColor")) delete settings.smsPillBorderColor;
+    if (has("smsPillTailRadius")) delete settings.smsPillTailRadius;
 
     // 로그 블록 (제목)
     if (!has("blockTitleFontSize")) settings.blockTitleFontSize = 0.75;
@@ -2416,8 +2430,9 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
         const bg = isUser ? settings.smsPillUserBgColor : settings.smsPillAiBgColor;
         const borderColor = isUser ? settings.smsPillUserBorderColor : settings.smsPillAiBorderColor;
         const borderWidth = clampNumber(settings.smsPillBorderWidth ?? 1, 0, 8);
-        const radius = clampNumber(settings.smsPillRadius ?? 999, 0, 999);
-        const tail = clampNumber(settings.smsPillTailRadius ?? 14, 0, radius);
+        const radius = clampNumber(settings.smsPillRadius ?? 28, 0, 40);
+        const tailPercent = clampNumber(settings.smsPillTailPercent ?? 2, 0, 100);
+        const tail = Math.round(radius * (tailPercent / 100));
         const paddingY = clampNumber(settings.smsPillPaddingY ?? 0.55, 0, 3);
         const paddingX = clampNumber(settings.smsPillPaddingX ?? 0.9, 0, 5);
         const maxWidth = clampNumber(settings.smsPillMaxWidth ?? 90, 40, 100);
@@ -3058,8 +3073,8 @@ const smsPillPresets = {
         smsPillUserBgColor: "#dbeafe",
         smsPillUserBorderColor: "#bfdbfe",
         smsPillBorderWidth: 1,
-        smsPillRadius: 999,
-        smsPillTailRadius: 14,
+        smsPillRadius: 28,
+        smsPillTailPercent: 1,
         smsPillPaddingY: 0.55,
         smsPillPaddingX: 0.9,
         smsPillFontSize: 0.95,
@@ -3072,8 +3087,8 @@ const smsPillPresets = {
         smsPillUserBgColor: "#eef2ff",
         smsPillUserBorderColor: "#c7d2fe",
         smsPillBorderWidth: 1,
-        smsPillRadius: 999,
-        smsPillTailRadius: 14,
+        smsPillRadius: 28,
+        smsPillTailPercent: 1,
         smsPillPaddingY: 0.6,
         smsPillPaddingX: 1.0,
         smsPillFontSize: 0.95,
@@ -3087,7 +3102,7 @@ const smsPillPresets = {
         smsPillUserBorderColor: "#4752c4",
         smsPillBorderWidth: 1,
         smsPillRadius: 14,
-        smsPillTailRadius: 8,
+        smsPillTailPercent: 57,
         smsPillPaddingY: 0.55,
         smsPillPaddingX: 0.95,
         smsPillFontSize: 0.95,
@@ -3101,7 +3116,7 @@ const smsPillPresets = {
         smsPillUserBorderColor: "#fde047",
         smsPillBorderWidth: 1,
         smsPillRadius: 18,
-        smsPillTailRadius: 10,
+        smsPillTailPercent: 56,
         smsPillPaddingY: 0.55,
         smsPillPaddingX: 0.95,
         smsPillFontSize: 0.95,
@@ -3114,8 +3129,8 @@ const smsPillPresets = {
         smsPillUserBgColor: "#fff1f2",
         smsPillUserBorderColor: "#fbcfe8",
         smsPillBorderWidth: 1,
-        smsPillRadius: 999,
-        smsPillTailRadius: 14,
+        smsPillRadius: 28,
+        smsPillTailPercent: 1,
         smsPillPaddingY: 0.6,
         smsPillPaddingX: 1.0,
         smsPillFontSize: 0.95,
@@ -3129,7 +3144,7 @@ const smsPillPresets = {
         smsPillUserBorderColor: "#bfdbfe",
         smsPillBorderWidth: 1,
         smsPillRadius: 16,
-        smsPillTailRadius: 10,
+        smsPillTailPercent: 63,
         smsPillPaddingY: 0.55,
         smsPillPaddingX: 0.95,
         smsPillFontSize: 0.95,
@@ -3142,8 +3157,8 @@ const smsPillPresets = {
         smsPillUserBgColor: "#ecfeff",
         smsPillUserBorderColor: "#a5f3fc",
         smsPillBorderWidth: 1,
-        smsPillRadius: 999,
-        smsPillTailRadius: 14,
+        smsPillRadius: 28,
+        smsPillTailPercent: 1,
         smsPillPaddingY: 0.55,
         smsPillPaddingX: 0.95,
         smsPillFontSize: 0.95,
@@ -3156,8 +3171,8 @@ const smsPillPresets = {
         smsPillUserBgColor: "#dbeafe",
         smsPillUserBorderColor: "#bfdbfe",
         smsPillBorderWidth: 2,
-        smsPillRadius: 999,
-        smsPillTailRadius: 14,
+        smsPillRadius: 28,
+        smsPillTailPercent: 1,
         smsPillPaddingY: 0.5,
         smsPillPaddingX: 0.9,
         smsPillFontSize: 0.95,
@@ -3170,8 +3185,8 @@ const smsPillPresets = {
         smsPillUserBgColor: "#f5f3ff",
         smsPillUserBorderColor: "#ddd6fe",
         smsPillBorderWidth: 1,
-        smsPillRadius: 999,
-        smsPillTailRadius: 14,
+        smsPillRadius: 28,
+        smsPillTailPercent: 1,
         smsPillPaddingY: 0.6,
         smsPillPaddingX: 1.05,
         smsPillFontSize: 0.95,
@@ -3185,7 +3200,7 @@ const smsPillPresets = {
         smsPillUserBorderColor: "#22c55e",
         smsPillBorderWidth: 1,
         smsPillRadius: 10,
-        smsPillTailRadius: 6,
+        smsPillTailPercent: 60,
         smsPillPaddingY: 0.5,
         smsPillPaddingX: 0.85,
         smsPillFontSize: 0.92,
@@ -3207,6 +3222,11 @@ smsPillPresetBtns.forEach(btn => {
         Object.entries(preset).forEach(([key, value]) => {
             settings[key] = value;
         });
+
+        // smsPillTailPercent는 0~100 범위를 유지
+        if (typeof settings.smsPillTailPercent === 'number') {
+            settings.smsPillTailPercent = clampNumber(settings.smsPillTailPercent, 0, 100);
+        }
 
         syncUIFromSettings();
         syncAllUIFromSettings();
@@ -3365,7 +3385,7 @@ const rangeInputs = [
     // [] 메시지(캡슐)
     { id: "style-sms-pill-border-width", key: "smsPillBorderWidth", valueId: "style-sms-pill-border-width-value", unit: "px" },
     { id: "style-sms-pill-radius", key: "smsPillRadius", valueId: "style-sms-pill-radius-value", unit: "px" },
-    { id: "style-sms-pill-tail-radius", key: "smsPillTailRadius", valueId: "style-sms-pill-tail-radius-value", unit: "px" },
+    { id: "style-sms-pill-tail-radius", key: "smsPillTailPercent", valueId: "style-sms-pill-tail-radius-value", unit: "%" },
     { id: "style-sms-pill-padding-y", key: "smsPillPaddingY", valueId: "style-sms-pill-padding-y-value", unit: "em" },
     { id: "style-sms-pill-padding-x", key: "smsPillPaddingX", valueId: "style-sms-pill-padding-x-value", unit: "em" },
     { id: "style-sms-pill-font-size", key: "smsPillFontSize", valueId: "style-sms-pill-font-size-value", unit: "em" },
@@ -3379,8 +3399,15 @@ rangeInputs.forEach(({ id, key, valueId, unit }) => {
 
     if (rangeEl && valueEl) {
         rangeEl.addEventListener("input", (e) => {
-            const val = parseFloat(e.target.value);
-            settings[key] = val;
+            let val = parseFloat(e.target.value);
+            if (key === "smsPillTailPercent") {
+                val = clampNumber(val, 0, 100);
+                settings.smsPillTailPercent = val;
+                rangeEl.value = String(val);
+            } else {
+                settings[key] = val;
+            }
+
             if (key === "badgeScale") {
                 valueEl.textContent = `${val.toFixed(2)}${unit}`;
             } else if (unit === "°") {
@@ -3390,6 +3417,7 @@ rangeInputs.forEach(({ id, key, valueId, unit }) => {
             } else {
                 valueEl.textContent = `${val}${unit}`;
             }
+
             updatePreview();
             saveToStorage();
         });
@@ -3846,7 +3874,7 @@ function syncAllUIFromSettings() {
         // [] 메시지(캡슐)
         { id: "style-sms-pill-border-width", key: "smsPillBorderWidth", valueId: "style-sms-pill-border-width-value", unit: "px" },
         { id: "style-sms-pill-radius", key: "smsPillRadius", valueId: "style-sms-pill-radius-value", unit: "px" },
-        { id: "style-sms-pill-tail-radius", key: "smsPillTailRadius", valueId: "style-sms-pill-tail-radius-value", unit: "px" },
+        { id: "style-sms-pill-tail-radius", key: "smsPillTailPercent", valueId: "style-sms-pill-tail-radius-value", unit: "%" },
         { id: "style-sms-pill-padding-y", key: "smsPillPaddingY", valueId: "style-sms-pill-padding-y-value", unit: "em" },
         { id: "style-sms-pill-padding-x", key: "smsPillPaddingX", valueId: "style-sms-pill-padding-x-value", unit: "em" },
         { id: "style-sms-pill-font-size", key: "smsPillFontSize", valueId: "style-sms-pill-font-size-value", unit: "em" },

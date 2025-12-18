@@ -107,10 +107,10 @@
               <div class="input-with-dropdown">
                 <input type="text" class="setting-input" id="ai-model" placeholder="직접 입력 또는 선택" autocomplete="off">
                 <div class="dropdown-menu" id="ai-model-dropdown">
+                  <button type="button" data-value="GPT 5.2">GPT 5.2</button>
                   <button type="button" data-value="GPT 5.1">GPT 5.1</button>
                   <button type="button" data-value="Claude 4.5 Opus">Claude 4.5 Opus</button>
                   <button type="button" data-value="Claude 3.7 Sonnet">Claude 3.7 Sonnet</button>
-                  <button type="button" data-value="Claude 4.5 Sonnet">Claude 4.5 Sonnet</button>
                   <button type="button" data-value="Gemini 3 Pro Preview">Gemini 3 Pro Preview</button>
                   <button type="button" data-value="Gemini 2.5 Pro">Gemini 2.5 Pro</button>
                 </div>
@@ -125,10 +125,9 @@
               <div class="input-with-dropdown">
                 <input type="text" class="setting-input" id="sub-model" placeholder="직접 입력 또는 선택" autocomplete="off">
                 <div class="dropdown-menu" id="sub-model-dropdown">
-                  <button type="button" data-value="GPT 5.1">GPT 5.1</button>
                   <button type="button" data-value="GPT 4.1">GPT 4.1</button>
-                  <button type="button" data-value="Claude 4.5 Sonnet">Claude 4.5 Sonnet</button>
                   <button type="button" data-value="Gemini 3 Pro Preview">Gemini 3 Pro Preview</button>
+                  <button type="button" data-value="Gemini 3 Flash Preview">Gemini 3 Flash Preview</button>
                   <button type="button" data-value="Gemini 2.5 Pro">Gemini 2.5 Pro</button>
                 </div>
               </div>
@@ -1189,9 +1188,9 @@
                   <div class="setting-group">
                     <label class="setting-label">둥글기</label>
                     <div class="range-input-wrap">
-                      <input type="range" class="setting-range" id="style-sms-pill-radius" min="0" max="999" step="1"
-                        value="999">
-                      <span class="range-value" id="style-sms-pill-radius-value">999px</span>
+                      <input type="range" class="setting-range" id="style-sms-pill-radius" min="0" max="40" step="1"
+                        value="28">
+                      <span class="range-value" id="style-sms-pill-radius-value">28px</span>
                     </div>
                   </div>
                 </div>
@@ -1200,9 +1199,9 @@
                   <div class="setting-group">
                     <label class="setting-label">꼬리 코너</label>
                     <div class="range-input-wrap">
-                      <input type="range" class="setting-range" id="style-sms-pill-tail-radius" min="0" max="200"
-                        step="1" value="14">
-                      <span class="range-value" id="style-sms-pill-tail-radius-value">14px</span>
+                      <input type="range" class="setting-range" id="style-sms-pill-tail-radius" min="0" max="100"
+                        step="1" value="2">
+                      <span class="range-value" id="style-sms-pill-tail-radius-value">2%</span>
                     </div>
                   </div>
                   <div class="setting-group">
