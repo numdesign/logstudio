@@ -108,9 +108,6 @@ function getContentEditableContent(el) {
         text = text.replace(placeholder, `<img src="${src}">`);
     });
 
-    // 연속 줄바꿈 정리 (3개 이상 -> 2개)
-    text = text.replace(/\n{3,}/g, '\n\n');
-
     return text;
 }
 
@@ -381,8 +378,8 @@ async function processHtmlWithImages(html) {
     // 줄바꿈 앞뒤 공백 제거
     cleanHtml = cleanHtml.replace(/ *\n */g, '\n');
 
-    // 연속된 줄바꿈 정리 (3개 이상 -> 2개)
-    cleanHtml = cleanHtml.replace(/\n{3,}/g, '\n\n').trim();
+    // 앞/뒤 공백 정리 (중간의 연속 줄바꿈은 보존)
+    cleanHtml = cleanHtml.trim();
 
     // 이미지 처리 및 placeholder 교체
     for (let i = 0; i < imagesToProcess.length; i++) {
@@ -2056,15 +2053,19 @@ function getParagraphStyle() {
 }
 
 // HTML 블록 콘텐츠 파싱 (이미지 + 텍스트 혼합 처리)
-function parseBlockContent(htmlContent) {
+function parseBlockContent(htmlContent, isForCode = true) {
     // HTML이 아니면 (순수 텍스트) 기존 방식으로 처리
     if (!htmlContent.includes('<')) {
-        const lines = htmlContent.split(/\r?\n/).filter(line => line.trim() !== '');
+        const lines = htmlContent.split(/\r?\n/);
+        // 끝쪽에 붙는 불필요한 공백 라인은 제거 (중간의 빈 줄은 보존)
+        while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+            lines.pop();
+        }
         let prevType = null;
         return lines.map(line => {
             const parsed = parseLine(line);
-            const html = generateBubbleHTML(parsed, true, { prevType });
-            prevType = parsed.type;
+            const html = generateBubbleHTML(parsed, isForCode, { prevType });
+            prevType = parsed.type === 'blank' ? null : parsed.type;
             return html;
         }).join('\n');
     }
@@ -2082,32 +2083,35 @@ function parseBlockContent(htmlContent) {
         if (node.nodeType === Node.TEXT_NODE) {
             // 텍스트 노드: 라인별로 파싱
             const text = node.textContent;
-            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            const lines = text.split(/\r?\n/);
             lines.forEach(line => {
                 const parsed = parseLine(line);
-                outputParts.push(generateBubbleHTML(parsed, true, { prevType }));
-                prevType = parsed.type;
+                outputParts.push(generateBubbleHTML(parsed, isForCode, { prevType }));
+                prevType = parsed.type === 'blank' ? null : parsed.type;
             });
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const tag = node.tagName.toLowerCase();
 
             if (tag === 'img') {
                 // 이미지: background-image div로 출력 (아카라이브 호환)
-                outputParts.push(`    ${getImageDivHTML(node.src)}`);
+                outputParts.push(`${isForCode ? '    ' : ''}${getImageDivHTML(node.src)}`);
                 prevType = 'image';
             } else if (tag === 'br') {
-                // br은 무시 (줄바꿈은 텍스트에서 처리)
+                // br = 줄바꿈(빈 줄 포함)을 유지
+                const parsed = { type: 'blank', content: '' };
+                outputParts.push(generateBubbleHTML(parsed, isForCode, { prevType }));
+                prevType = null;
             } else if (tag === 'div' || tag === 'p') {
                 // div, p: 자식 처리
                 node.childNodes.forEach(child => processNode(child));
             } else {
                 // 기타 태그: 내부 텍스트 추출하여 처리
                 const text = node.textContent;
-                const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+                const lines = text.split(/\r?\n/);
                 lines.forEach(line => {
                     const parsed = parseLine(line);
-                    outputParts.push(generateBubbleHTML(parsed, true, { prevType }));
-                    prevType = parsed.type;
+                    outputParts.push(generateBubbleHTML(parsed, isForCode, { prevType }));
+                    prevType = parsed.type === 'blank' ? null : parsed.type;
                 });
             }
         }
@@ -2121,6 +2125,14 @@ function parseBlockContent(htmlContent) {
 // 라인 파싱 (마커 감지)
 function parseLine(line) {
     const trimmed = line.trim();
+
+    // 빈 줄(연속 개행 포함) 유지
+    if (trimmed === '') {
+        return {
+            type: 'blank',
+            content: ''
+        };
+    }
 
     // 구분선 (---, ===, ***) - 3개 이상의 같은 문자
     if (/^(-{3,}|={3,}|\*{3,})$/.test(trimmed)) {
@@ -2312,6 +2324,12 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
     const bubbleTopGap = (prevType === 'narration' || prevType === 'heading' || prevType === 'image') ? settings.bubbleGap : 0;
     const bubbleMargin = `${bubbleTopGap}em 0 ${settings.bubbleGap}em 0`;
 
+    // 빈 줄: 입력한 개행을 실제 높이로 보존
+    if (parsed.type === 'blank') {
+        const lh = clampNumber(settings.lineHeight ?? 1.5, 0.8, 3);
+        return `${indent}<div style="height: ${lh}em;"></div>`;
+    }
+
     // 말풍선 테두리 스타일
     let bubbleBorderStyle = "";
     if (settings.bubbleBorder) {
@@ -2501,7 +2519,7 @@ function generateHTML() {
     // 블록별 HTML 생성
     const blocksHTML = blocksWithContent.map((block, index) => {
         // HTML 콘텐츠에서 라인별로 처리 (이미지 포함)
-        const linesHTML = parseBlockContent(block.content);
+        const linesHTML = parseBlockContent(block.content, true);
 
         // 접기/펼치기 사용 여부
         if (block.collapsible) {
@@ -2744,14 +2762,7 @@ function updatePreview() {
 
         // 블록별 HTML 생성
         const blocksHTML = blocksWithContent.map((block, index) => {
-            const lines = block.content.split(/\r?\n/).filter((line) => line.trim() !== "");
-            let prevType = null;
-            const linesHTML = lines.map((line) => {
-                const parsed = parseLine(line);
-                const html = generateBubbleHTML(parsed, false, { prevType });
-                prevType = parsed.type;
-                return html;
-            }).join("");
+            const linesHTML = parseBlockContent(block.content, false);
 
             // 접기/펼치기 사용 여부
             if (block.collapsible) {
@@ -4209,8 +4220,7 @@ function removeBracketedText(text) {
     // 중첩되지 않은 대괄호만 처리
     return text
         .replace(/\[[^\[\]]*\]/g, '')  // [텍스트] 제거
-        .replace(/[ \t]{2,}/g, ' ')     // 연속 공백(스페이스/탭)만 하나로 (줄바꿈 유지)
-        .replace(/\n{3,}/g, '\n\n');    // 3개 이상 연속 줄바꿈을 2개로
+        .replace(/[ \t]{2,}/g, ' ');     // 연속 공백(스페이스/탭)만 하나로 (줄바꿈 유지)
 }
 
 function removeAllBracketedText() {
