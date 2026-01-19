@@ -501,7 +501,8 @@ function saveToStorageNow() {
         localStorage.setItem(STORAGE_KEYS.BLOCK_COUNTER, blockIdCounter.toString());
 
         // Undo/Redo 히스토리에 상태 저장 (디바운스)
-        if (!isUndoRedoAction) {
+        const skipHistory = Boolean(saveToStorageNow._skipHistory);
+        if (!isUndoRedoAction && !skipHistory) {
             debouncedPushHistory();
         }
     } catch (e) {
@@ -512,12 +513,16 @@ function saveToStorageNow() {
 // 기본은 디바운스 저장(타이핑 렉 감소). 즉시 저장이 필요하면 saveToStorage({ immediate: true }) 사용.
 function saveToStorage(options = null) {
     const immediate = options?.immediate === true;
+    // 내부용: 저장은 하되 히스토리 디바운스를 건너뛰고, 호출자가 직접 pushHistory를 관리할 때 사용
+    const skipHistory = Boolean(options?.skipHistory);
     if (immediate) {
         if (storageSaveTimer) {
             clearTimeout(storageSaveTimer);
             storageSaveTimer = null;
         }
+        saveToStorageNow._skipHistory = skipHistory;
         saveToStorageNow();
+        saveToStorageNow._skipHistory = false;
         return;
     }
 
@@ -526,7 +531,9 @@ function saveToStorage(options = null) {
     }
     storageSaveTimer = setTimeout(() => {
         storageSaveTimer = null;
+        saveToStorageNow._skipHistory = skipHistory;
         saveToStorageNow();
+        saveToStorageNow._skipHistory = false;
     }, STORAGE_SAVE_DEBOUNCE_MS);
 }
 
@@ -736,6 +743,50 @@ function pushHistory() {
     }
 
     // Redo 스택 초기화 (새 작업 시)
+    redoStack = [];
+}
+
+// UI-only 변경(예: 블록 접기/펼치기)은 내용/이미지 처리 비용을 피하기 위해
+// 직전 스냅샷을 기반으로 빠르게 히스토리 스냅샷을 추가합니다.
+function pushHistoryForCollapseState(nextCollapsedById) {
+    if (isUndoRedoAction) return;
+
+    // 베이스 스냅샷이 없으면 1회 전체 캡처로 초기화
+    if (historyStack.length === 0) {
+        historyStack.push(captureState());
+    }
+
+    const base = historyStack[historyStack.length - 1];
+    const baseIds = Array.isArray(base?.blocks) ? base.blocks.map(b => b.id) : [];
+    const currentIds = logBlocks.map(b => b.id);
+
+    // 블록 구조가 바뀐 상황(추가/삭제/정렬 변경 등)에서는 안전하게 전체 캡처로 fallback
+    if (baseIds.length !== currentIds.length || baseIds.some((id, i) => id !== currentIds[i])) {
+        pushHistory();
+        return;
+    }
+
+    const blocks = base.blocks.map(b => {
+        if (Object.prototype.hasOwnProperty.call(nextCollapsedById, b.id)) {
+            return { ...b, collapsed: Boolean(nextCollapsedById[b.id]) };
+        }
+        return b;
+    });
+
+    const snapshot = {
+        blocks,
+        settings: base.settings,
+        blockIdCounter: blockIdCounter,
+        timestamp: Date.now()
+    };
+
+    // 변경이 없으면 스킵
+    if (JSON.stringify(base.blocks) === JSON.stringify(snapshot.blocks)) return;
+
+    historyStack.push(snapshot);
+    if (historyStack.length > MAX_HISTORY_SIZE) {
+        historyStack.shift();
+    }
     redoStack = [];
 }
 
@@ -1081,7 +1132,9 @@ function renderLogBlocks() {
             const block = logBlocks.find(b => b.id === blockId);
             if (block) {
                 block.collapsed = !block.collapsed;
+                pushHistoryForCollapseState({ [blockId]: block.collapsed });
                 renderLogBlocks();
+                saveToStorage({ immediate: true, skipHistory: true });
             }
         });
 
@@ -1157,6 +1210,9 @@ const settings = {
     disableHeader: false,
     // - 컨테이너 사용 안 함: 배경/테두리/둥글기/그림자 미적용 + 미리보기 캔버스 배경 흰색 고정
     disableContainerStyle: false,
+
+    // 미리보기 클릭 시 이동 확인창
+    previewClickConfirm: false,
     // 컨테이너 외부 여백(위/아래) - margin으로 적용
     containerOuterMarginY: 1.5,
     // (레거시 호환) 4방향 외부 여백
@@ -2385,10 +2441,12 @@ function parseBlockContent(htmlContent, isForCode = true) {
             lines.pop();
         }
         let prevType = null;
+        let lineIndex = 0;
         return lines.map(line => {
             const parsed = parseLine(line);
-            const html = generateBubbleHTML(parsed, isForCode, { prevType });
+            const html = generateBubbleHTML(parsed, isForCode, { prevType, lineIndex });
             prevType = parsed.type === 'blank' ? null : parsed.type;
+            lineIndex += 1;
             return html;
         }).join('\n');
     }
@@ -2400,6 +2458,7 @@ function parseBlockContent(htmlContent, isForCode = true) {
 
     const outputParts = [];
     let prevType = null;
+    let lineIndex = 0;
 
     // 재귀적으로 노드 처리
     function processNode(node) {
@@ -2409,21 +2468,30 @@ function parseBlockContent(htmlContent, isForCode = true) {
             const lines = text.split(/\r?\n/);
             lines.forEach(line => {
                 const parsed = parseLine(line);
-                outputParts.push(generateBubbleHTML(parsed, isForCode, { prevType }));
+                outputParts.push(generateBubbleHTML(parsed, isForCode, { prevType, lineIndex }));
                 prevType = parsed.type === 'blank' ? null : parsed.type;
+                lineIndex += 1;
             });
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const tag = node.tagName.toLowerCase();
 
             if (tag === 'img') {
                 // 이미지: background-image div로 출력 (아카라이브 호환)
-                outputParts.push(`${isForCode ? '    ' : ''}${getImageDivHTML(node.src)}`);
+                const html = `${isForCode ? '    ' : ''}${getImageDivHTML(node.src)}`;
+                // preview용 라인 메타는 getImageDivHTML 내부 구현을 건드리지 않기 위해 wrapper로 처리
+                if (!isForCode) {
+                    outputParts.push(`<div data-preview-line="${lineIndex}">${html}</div>`);
+                } else {
+                    outputParts.push(html);
+                }
                 prevType = 'image';
+                lineIndex += 1;
             } else if (tag === 'br') {
                 // br = 줄바꿈(빈 줄 포함)을 유지
                 const parsed = { type: 'blank', content: '' };
-                outputParts.push(generateBubbleHTML(parsed, isForCode, { prevType }));
+                outputParts.push(generateBubbleHTML(parsed, isForCode, { prevType, lineIndex }));
                 prevType = null;
+                lineIndex += 1;
             } else if (tag === 'div' || tag === 'p') {
                 // div, p: 자식 처리
                 node.childNodes.forEach(child => processNode(child));
@@ -2433,8 +2501,9 @@ function parseBlockContent(htmlContent, isForCode = true) {
                 const lines = text.split(/\r?\n/);
                 lines.forEach(line => {
                     const parsed = parseLine(line);
-                    outputParts.push(generateBubbleHTML(parsed, isForCode, { prevType }));
+                    outputParts.push(generateBubbleHTML(parsed, isForCode, { prevType, lineIndex }));
                     prevType = parsed.type === 'blank' ? null : parsed.type;
+                    lineIndex += 1;
                 });
             }
         }
@@ -2664,6 +2733,9 @@ function parseMarkdownForBubble(text) {
 // 말풍선 HTML 생성
 function generateBubbleHTML(parsed, isForCode = false, context = null) {
     const indent = isForCode ? '    ' : '';
+    const lineAttr = (!isForCode && typeof context?.lineIndex === 'number')
+        ? ` data-preview-line="${context.lineIndex}"`
+        : '';
     const bubblePadding = `${settings.bubblePadding}em ${settings.bubblePadding * 1.25}em`;
     const bubbleRadius = `${settings.bubbleRadius}px`;
     const bubbleMaxWidth = `${settings.bubbleMaxWidth}%`;
@@ -2674,7 +2746,7 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
     // 빈 줄: 입력한 개행을 실제 높이로 보존
     if (parsed.type === 'blank') {
         const lh = clampNumber(settings.lineHeight ?? 1.5, 0.8, 3);
-        return `${indent}<div style="height: ${lh}em;"></div>`;
+        return `${indent}<div${lineAttr} style="height: ${lh}em;"></div>`;
     }
 
     function buildSmsPillHTML(side, text, align) {
@@ -2703,7 +2775,7 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
         const wrapperStyle = `display: block; text-align: ${align}; margin: ${bubbleMargin};`;
         const pillStyle = `display: inline-block; padding: ${paddingY}em ${paddingX}em; background: ${bg}; color: ${textColor}; border: ${borderWidth}px solid ${borderColor}; border-radius: ${borderRadius}; max-width: ${maxWidth}%; font-size: ${fontSize}em; line-height: 1.35; word-break: keep-all;${shadowStyle}`;
         const content = parseMarkdownForBubble(text);
-        return `${indent}<div style="${wrapperStyle}"><div style="${pillStyle}">${content}</div></div>`;
+        return `${indent}<div${lineAttr} style="${wrapperStyle}"><div style="${pillStyle}">${content}</div></div>`;
     }
 
     // [] 메시지: 기본(마커 없음)은 AI 스타일 + 왼쪽 정렬
@@ -2724,7 +2796,7 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
     // 구분선
     if (parsed.type === 'divider') {
         const dividerStyle = `margin: 1.5em 0; border: none; border-top: 1px solid ${settings.dividerColor}; height: 0;`;
-        return `${indent}<hr style="${dividerStyle}">`;
+        return `${indent}<hr${lineAttr} style="${dividerStyle}">`;
     }
 
     // 마크다운 제목
@@ -2753,7 +2825,7 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
 
         const headingTopGap = (prevType === 'narration') ? settings.bubbleGap : 0;
         const headingStyle = `margin: ${headingTopGap}em 0 ${marginBottom} 0; font-size: ${fontSize}; font-weight: ${fontWeight}; color: ${settings.headingColor}; line-height: 1.4;`;
-        return `${indent}<p style="${headingStyle}">${content}</p>`;
+        return `${indent}<p${lineAttr} style="${headingStyle}">${content}</p>`;
     }
 
     if (parsed.type === 'ai') {
@@ -2769,9 +2841,9 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
         const charName = settings.charName || 'AI';
 
         if (settings.showNametag) {
-            return `${indent}<div style="${wrapperStyle}"><div style="${bubbleStyle}"><span style="${nametagStyle}">${escapeHTMLContent(charName)}</span>${content}</div></div>`;
+            return `${indent}<div${lineAttr} style="${wrapperStyle}"><div style="${bubbleStyle}"><span style="${nametagStyle}">${escapeHTMLContent(charName)}</span>${content}</div></div>`;
         } else {
-            return `${indent}<div style="${wrapperStyle}"><div style="${bubbleStyle}">${content}</div></div>`;
+            return `${indent}<div${lineAttr} style="${wrapperStyle}"><div style="${bubbleStyle}">${content}</div></div>`;
         }
     } else if (parsed.type === 'user') {
         if (parsed.sms) {
@@ -2791,15 +2863,15 @@ function generateBubbleHTML(parsed, isForCode = false, context = null) {
         const userName = settings.userName || 'User';
 
         if (settings.showNametag) {
-            return `${indent}<div style="${wrapperStyle}"><div style="${bubbleStyle}"><span style="${nametagStyle}">${escapeHTMLContent(userName)}</span>${content}</div></div>`;
+            return `${indent}<div${lineAttr} style="${wrapperStyle}"><div style="${bubbleStyle}"><span style="${nametagStyle}">${escapeHTMLContent(userName)}</span>${content}</div></div>`;
         } else {
-            return `${indent}<div style="${wrapperStyle}"><div style="${bubbleStyle}">${content}</div></div>`;
+            return `${indent}<div${lineAttr} style="${wrapperStyle}"><div style="${bubbleStyle}">${content}</div></div>`;
         }
     } else {
         // 나레이션 - 기존 parseMarkdown 사용 (대사 스타일 적용)
         const content = parseMarkdown(parsed.content);
         const pStyle = getParagraphStyle();
-        return `${indent}<p style="${pStyle}">${content}</p>`;
+        return `${indent}<p${lineAttr} style="${pStyle}">${content}</p>`;
     }
 }
 
@@ -4469,6 +4541,166 @@ function syncAllUIFromSettings() {
     const disableContainerStyleLabelEl = document.getElementById("style-disable-container-style-label");
     if (disableContainerStyleEl) disableContainerStyleEl.checked = Boolean(settings.disableContainerStyle);
     if (disableContainerStyleLabelEl) disableContainerStyleLabelEl.textContent = settings.disableContainerStyle ? "켜짐" : "꺼짐";
+
+    // (미리보기 클릭 이동 확인 토글 UI는 우측 미리보기 헤더에 별도 동기화)
+}
+
+// ===== 미리보기 클릭 이동 확인 토글(헤더) =====
+const previewClickConfirmSwitch = document.getElementById('preview-click-confirm-switch');
+const previewClickConfirmContainer = document.getElementById('preview-click-confirm-container');
+
+function syncPreviewClickConfirmToggleUI() {
+    if (!previewClickConfirmContainer || !previewClickConfirmSwitch) return;
+    const isOn = Boolean(settings.previewClickConfirm);
+    previewClickConfirmSwitch.classList.toggle('on', isOn);
+
+    const icons = previewClickConfirmContainer.querySelectorAll('.mode-icon');
+    if (icons.length >= 2) {
+        icons[0].classList.toggle('active', !isOn);
+        icons[1].classList.toggle('active', isOn);
+    }
+}
+
+if (previewClickConfirmSwitch) {
+    previewClickConfirmSwitch.addEventListener('click', () => {
+        settings.previewClickConfirm = !Boolean(settings.previewClickConfirm);
+        syncPreviewClickConfirmToggleUI();
+        saveToStorage();
+    });
+}
+
+// ===== 미리보기 클릭 → 편집기 이동 =====
+function placeCaretAtLineStart(contentEditableEl, targetLineIndex) {
+    if (!contentEditableEl) return;
+    const lineIndex = Math.max(0, Number(targetLineIndex) || 0);
+    const sel = window.getSelection();
+    if (!sel) return;
+
+    const range = document.createRange();
+
+    if (lineIndex === 0) {
+        range.setStart(contentEditableEl, 0);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+    }
+
+    let currentLine = 0;
+    let anchorNode = null;
+    let anchorOffset = 0;
+
+    for (const node of Array.from(contentEditableEl.childNodes)) {
+        if (node.nodeName === 'BR') {
+            currentLine += 1;
+            if (currentLine === lineIndex) {
+                anchorNode = node;
+                anchorOffset = null;
+                break;
+            }
+        }
+    }
+
+    if (anchorNode) {
+        range.setStartAfter(anchorNode);
+    } else {
+        // 라인 수가 부족하면 끝으로
+        range.selectNodeContents(contentEditableEl);
+        range.collapse(false);
+    }
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function revealCaretInView(contentEditableEl) {
+    if (!contentEditableEl) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    // selection이 해당 contenteditable 내부가 아니면 스킵
+    const activeRange = sel.getRangeAt(0);
+    const container = activeRange.startContainer;
+    if (container && !contentEditableEl.contains(container)) return;
+
+    const range = activeRange.cloneRange();
+    range.collapse(true);
+
+    const marker = document.createElement('span');
+    marker.className = 'caret-reveal-marker';
+    marker.textContent = '\u200b';
+
+    try {
+        range.insertNode(marker);
+        const after = document.createRange();
+        after.setStartAfter(marker);
+        after.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(after);
+
+        // 스크롤: 블록이 매우 길어도 caret 위치가 바로 보이도록
+        marker.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+
+        // 짧은 하이라이트 후 제거
+        setTimeout(() => {
+            marker.remove();
+        }, 700);
+    } catch (e) {
+        // 실패 시(희귀): 아무것도 하지 않음
+        try { marker.remove(); } catch { }
+    }
+}
+
+async function navigateToBlockLine(blockId, lineIndex) {
+    const id = Number(blockId);
+    const line = Number(lineIndex);
+    const block = logBlocks.find(b => b.id === id);
+    if (!block) return;
+
+    if (settings.previewClickConfirm) {
+        const ok = await openConfirmModal({
+            title: '편집기 이동',
+            message: '미리보기에서 선택한 위치로 이동할까요?',
+            confirmText: '이동',
+            cancelText: '취소',
+        });
+        if (!ok) return;
+    }
+
+    if (block.collapsed) {
+        block.collapsed = false;
+        pushHistoryForCollapseState({ [id]: false });
+        renderLogBlocks();
+        saveToStorage({ immediate: true, skipHistory: true });
+    }
+
+    // 렌더 후 요소 찾기
+    const blockEl = document.querySelector(`.log-block[data-block-id="${id}"]`);
+    if (!blockEl) return;
+
+    blockEl.classList.add('navigate-target');
+    setTimeout(() => blockEl.classList.remove('navigate-target'), 800);
+    blockEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const contentEl = blockEl.querySelector('.log-block-textarea');
+    if (contentEl) {
+        contentEl.focus({ preventScroll: true });
+        placeCaretAtLineStart(contentEl, line);
+        // caret 위치가 화면에 바로 보이도록 보정
+        requestAnimationFrame(() => revealCaretInView(contentEl));
+    }
+}
+
+if (previewEl) {
+    previewEl.addEventListener('click', (e) => {
+        const lineEl = e.target.closest('[data-preview-line]');
+        if (!lineEl) return;
+        const wrapper = e.target.closest('[data-preview-block-id]');
+        if (!wrapper) return;
+
+        const blockId = wrapper.getAttribute('data-preview-block-id');
+        const lineIndex = lineEl.getAttribute('data-preview-line');
+        navigateToBlockLine(blockId, lineIndex);
+    });
 }
 
 console.log("main.js loaded successfully");
@@ -5253,6 +5485,66 @@ if (collapseNewlinesBtn) {
 // ===== 찾기 및 바꾸기 =====
 const findReplaceBtn = document.getElementById('find-replace-btn');
 
+const FIND_REPLACE_FAVORITES_KEY = 'loggen_find_replace_favorites_v1';
+
+function loadFindReplaceFavorites() {
+    try {
+        const raw = localStorage.getItem(FIND_REPLACE_FAVORITES_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveFindReplaceFavorites(favorites) {
+    try {
+        localStorage.setItem(FIND_REPLACE_FAVORITES_KEY, JSON.stringify(favorites || []));
+    } catch { }
+}
+
+function normalizeFindReplaceFavorite(entry) {
+    return {
+        name: String(entry?.name || '').trim() || null,
+        find: String(entry?.find || ''),
+        replace: String(entry?.replace || ''),
+        regex: Boolean(entry?.regex),
+        caseSensitive: Boolean(entry?.caseSensitive)
+    };
+}
+
+function computeRegexForFind(findText, useRegex, caseSensitive) {
+    const flags = caseSensitive ? 'g' : 'gi';
+    return useRegex ? new RegExp(findText, flags) : new RegExp(escapeRegExp(findText), flags);
+}
+
+function countMatchesFrameSliced(regex) {
+    return new Promise((resolve) => {
+        let i = 0;
+        let count = 0;
+
+        function step() {
+            const start = performance.now();
+            while (i < logBlocks.length) {
+                const block = logBlocks[i++];
+                const matches = block.content.match(regex);
+                if (matches) count += matches.length;
+
+                // 프레임당 10ms 정도만 사용
+                if (performance.now() - start > 10) break;
+            }
+
+            if (i < logBlocks.length) {
+                requestAnimationFrame(step);
+            } else {
+                resolve(count);
+            }
+        }
+
+        requestAnimationFrame(step);
+    });
+}
+
 function createFindReplaceModal() {
     const modal = document.createElement('div');
     modal.id = 'find-replace-modal';
@@ -5293,8 +5585,12 @@ function createFindReplaceModal() {
                 </div>
                 <div class="find-replace-actions">
                     <span class="find-replace-result" id="find-replace-result"></span>
-                    <button type="button" class="find-replace-btn find-replace-btn--secondary" id="find-count-btn">개수 확인</button>
+                    <button type="button" class="find-replace-btn find-replace-btn--secondary" id="favorite-add-btn">★ 저장</button>
                     <button type="button" class="find-replace-btn find-replace-btn--primary" id="replace-all-btn">모두 바꾸기</button>
+                </div>
+                <div class="find-replace-presets" style="margin-top: 10px;">
+                    <span class="presets-label">즐겨찾기:</span>
+                    <div id="find-replace-favorites" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
                 </div>
             </div>
         </div>
@@ -5341,19 +5637,78 @@ function createFindReplaceModal() {
             }
 
             document.getElementById('find-replace-result').textContent = '';
+            scheduleLiveCount();
         });
     });
 
-    // 개수 확인 버튼
-    modal.querySelector('#find-count-btn').addEventListener('click', () => {
-        const count = countMatches();
-        const resultEl = document.getElementById('find-replace-result');
-        if (count === 0) {
-            resultEl.textContent = '일치하는 항목이 없습니다.';
-            resultEl.style.color = '#ef4444';
+    function renderFavorites() {
+        const container = document.getElementById('find-replace-favorites');
+        if (!container) return;
+        const favorites = loadFindReplaceFavorites();
+
+        if (favorites.length === 0) {
+            container.innerHTML = '<span style="color:#94a3b8; font-size:12px;">없음</span>';
+            return;
+        }
+
+        container.innerHTML = favorites.map((fav, idx) => {
+            const label = fav.name || (fav.find.length > 18 ? fav.find.slice(0, 18) + '…' : fav.find) || '(빈 패턴)';
+            return `
+                <button type="button" class="preset-btn" data-fav-index="${idx}" title="${escapeHtmlAttr(fav.find)} → ${escapeHtmlAttr(fav.replace)}">${escapeHtml(label)}</button>
+                <button type="button" class="preset-btn" data-fav-delete="${idx}" title="삭제" style="padding:6px 10px;">✕</button>
+            `;
+        }).join('');
+
+        container.querySelectorAll('[data-fav-index]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const favorites = loadFindReplaceFavorites();
+                const fav = favorites[Number(btn.dataset.favIndex)];
+                if (!fav) return;
+                document.getElementById('find-input').value = fav.find;
+                document.getElementById('replace-input').value = fav.replace;
+                document.getElementById('find-regex').checked = Boolean(fav.regex);
+                document.getElementById('find-case-sensitive').checked = Boolean(fav.caseSensitive);
+                scheduleLiveCount();
+            });
+        });
+
+        container.querySelectorAll('[data-fav-delete]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = Number(btn.dataset.favDelete);
+                const favorites = loadFindReplaceFavorites();
+                favorites.splice(idx, 1);
+                saveFindReplaceFavorites(favorites);
+                renderFavorites();
+            });
+        });
+    }
+
+    modal.querySelector('#favorite-add-btn').addEventListener('click', async () => {
+        const find = document.getElementById('find-input').value;
+        const replace = document.getElementById('replace-input').value;
+        const regex = document.getElementById('find-regex').checked;
+        const caseSensitive = document.getElementById('find-case-sensitive').checked;
+        if (!find) {
+            await openConfirmModal({
+                title: '즐겨찾기 저장',
+                message: '찾을 텍스트가 비어있습니다.',
+                confirmText: '확인',
+                cancelText: null,
+            });
+            return;
+        }
+
+        const entry = normalizeFindReplaceFavorite({ name: null, find, replace, regex, caseSensitive });
+        const favorites = loadFindReplaceFavorites();
+        const key = JSON.stringify(entry);
+        const exists = favorites.some(f => JSON.stringify(normalizeFindReplaceFavorite(f)) === key);
+        if (!exists) {
+            favorites.unshift(entry);
+            saveFindReplaceFavorites(favorites.slice(0, 20));
+            renderFavorites();
+            showToast('즐겨찾기에 저장했습니다');
         } else {
-            resultEl.textContent = `${count}개 발견`;
-            resultEl.style.color = '#22c55e';
+            showToast('이미 저장된 즐겨찾기입니다');
         }
     });
 
@@ -5382,6 +5737,63 @@ function createFindReplaceModal() {
             }
         });
     });
+
+    // 라이브 카운트
+    let liveCountToken = 0;
+    async function scheduleLiveCount() {
+        const token = ++liveCountToken;
+        const findText = document.getElementById('find-input').value;
+        const useRegex = document.getElementById('find-regex').checked;
+        const caseSensitive = document.getElementById('find-case-sensitive').checked;
+        const resultEl = document.getElementById('find-replace-result');
+
+        if (!findText) {
+            resultEl.textContent = '';
+            return;
+        }
+
+        let regex;
+        try {
+            regex = computeRegexForFind(findText, useRegex, caseSensitive);
+        } catch (e) {
+            resultEl.textContent = '정규식 오류';
+            resultEl.style.color = '#ef4444';
+            return;
+        }
+
+        resultEl.textContent = '일치 개수 계산 중…';
+        resultEl.style.color = '#94a3b8';
+
+        const count = await countMatchesFrameSliced(regex);
+        if (token !== liveCountToken) return;
+
+        if (count === 0) {
+            resultEl.textContent = '일치 없음';
+            resultEl.style.color = '#ef4444';
+        } else {
+            resultEl.textContent = `일치: ${count}개`;
+            resultEl.style.color = '#22c55e';
+        }
+    }
+
+    // 입력/옵션 변경 시 라이브 카운트 트리거
+    modal.querySelectorAll('#find-input, #replace-input').forEach(el => {
+        el.addEventListener('input', () => {
+            // typing 중엔 약간만 늦춰서
+            const t = ++liveCountToken;
+            setTimeout(() => {
+                if (t !== liveCountToken) return;
+                scheduleLiveCount();
+            }, 150);
+        });
+    });
+
+    modal.querySelectorAll('#find-regex, #find-case-sensitive').forEach(el => {
+        el.addEventListener('change', scheduleLiveCount);
+    });
+
+    renderFavorites();
+    scheduleLiveCount();
 }
 
 function countMatches() {
@@ -5477,6 +5889,10 @@ function closeFindReplaceModal() {
 if (findReplaceBtn) {
     findReplaceBtn.addEventListener('click', openFindReplaceModal);
 }
+
+
+// 초기 UI 반영
+syncPreviewClickConfirmToggleUI();
 
 // ===== 전체 초기화 =====
 const resetAllBtn = document.getElementById('reset-all-btn');

@@ -12,6 +12,47 @@ body {
     height: 100%;
 }
 
+.log-block.navigate-target {
+    box-shadow: 0 0 0 2px var(--accent), var(--shadow-md);
+    border-color: var(--accent);
+}
+
+/* 미리보기 클릭 이동 affordance */
+.preview-content [data-preview-line] {
+    cursor: pointer;
+}
+
+.preview-content [data-preview-line]:hover {
+    filter: brightness(0.98);
+}
+
+/* 프리뷰→편집 이동 시 caret 위치가 보이도록 잠깐 표시 */
+.caret-reveal-marker {
+    display: inline-block;
+    width: 12px;
+    height: 1.25em;
+    margin-left: -2px;
+    margin-right: 2px;
+    border-radius: 10px;
+    background: var(--accent);
+    opacity: 0.22;
+    vertical-align: text-bottom;
+    animation: caretRevealFlash 700ms ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes caretRevealFlash {
+    0% {
+        opacity: 0.22;
+        transform: scaleX(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scaleX(2.25);
+    }
+}
+
 /* ===== 라이트 테마 (기본) - Modern Clean ===== */
 :root {
     --bg: #f8f9fa;
@@ -861,6 +902,44 @@ body.theme-dark .preview-canvas.preview-canvas--plain {
 
 .preview-mode-switch.mobile {
     background: var(--accent);
+}
+
+/* generic ON state (reused by other switches) */
+.preview-mode-switch.on::after {
+    transform: translateX(16px);
+}
+
+.preview-mode-switch.on {
+    background: var(--accent);
+}
+
+/* simple tooltip (custom) */
+.tooltip-wrap {
+    position: relative;
+}
+
+.tooltip-wrap::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    transform: translateX(-50%) translateY(2px);
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.95);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 20;
+}
+
+.tooltip-wrap:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
 
 /* 미리보기 내용 (실제 div) */
