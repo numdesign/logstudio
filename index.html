@@ -60,8 +60,9 @@
                 <button id="import-json-btn" class="log-action-btn" type="button" title="RisuAI JSON 가져오기">
                   📥 JSON
                 </button>
-                <button id="remove-brackets-btn" class="log-action-btn" type="button" title="모든 블록에서 [대괄호] 텍스트 제거">
-                  🧹 [ ] 제거
+                <button id="collapse-newlines-btn" class="log-action-btn" type="button"
+                  title="모든 블록에서 연속 개행(2줄 이상)을 1줄로 줄이기">
+                  ↵ 개행 줄이기
                 </button>
                 <button id="find-replace-btn" class="log-action-btn" type="button" title="찾기 및 바꾸기">
                   🔍 바꾸기
@@ -205,6 +206,28 @@
                     style="background: linear-gradient(135deg, #fff5fb 50%, #8b5cf6 50%);"></span>
                 </button>
 
+                <!-- White-base Themes (New) -->
+                <button type="button" class="theme-preset" data-theme="light-porcelain" title="포슬린">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #ffffff 50%, #2563eb 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="light-rose-quartz" title="로즈 쿼츠">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #ffffff 50%, #e11d48 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="light-olive-paper" title="올리브 페이퍼">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #ffffff 50%, #65a30d 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="light-cobalt-clean" title="코발트 클린">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #ffffff 50%, #1d4ed8 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="light-amber-studio" title="앰버 스튜디오">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #ffffff 50%, #f59e0b 50%);"></span>
+                </button>
+
                 <!-- Dark Themes -->
                 <button type="button" class="theme-preset" data-theme="dark-space" title="딥 스페이스">
                   <span class="preset-swatch"
@@ -271,6 +294,20 @@
                     style="background: linear-gradient(135deg, #031b1f 50%, #2dd4bf 50%);"></span>
                 </button>
 
+                <!-- Black-base Themes (New) -->
+                <button type="button" class="theme-preset" data-theme="dark-graphite" title="그래파이트">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #0b0b0c 50%, #22d3ee 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="dark-crimson" title="크림슨">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #0b0b0c 50%, #fb7185 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="dark-violet" title="바이올렛">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #0b0b0c 50%, #a78bfa 50%);"></span>
+                </button>
+
                 <!-- Natural Themes -->
                 <button type="button" class="theme-preset" data-theme="nature-sage" title="세이지 그린">
                   <span class="preset-swatch"
@@ -327,6 +364,28 @@
                 <button type="button" class="theme-preset" data-theme="ref-terminal" title="터미널">
                   <span class="preset-swatch"
                     style="background: linear-gradient(135deg, #030712 50%, #22c55e 50%);"></span>
+                </button>
+
+                <!-- Reference Themes (Modern) -->
+                <button type="button" class="theme-preset" data-theme="ref-github" title="GitHub">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #ffffff 50%, #0969da 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="ref-linear" title="Linear">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #0c0d10 50%, #a78bfa 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="ref-figma" title="Figma">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #0b0b0c 50%, #f472b6 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="ref-slack" title="Slack">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #ffffff 50%, #611f69 50%);"></span>
+                </button>
+                <button type="button" class="theme-preset" data-theme="ref-material-you" title="Material You">
+                  <span class="preset-swatch"
+                    style="background: linear-gradient(135deg, #faf7ff 50%, #7c3aed 50%);"></span>
                 </button>
               </div>
             </div>
@@ -531,10 +590,10 @@
                 <div class="setting-group">
                   <label class="setting-label">텍스트 정렬</label>
                   <select class="setting-select" id="style-text-align">
-                    <option value="left">왼쪽 정렬</option>
+                    <option value="left" selected>왼쪽 정렬</option>
                     <option value="center">가운데 정렬</option>
                     <option value="right">오른쪽 정렬</option>
-                    <option value="justify" selected>양쪽 정렬</option>
+                    <option value="justify">양쪽 정렬</option>
                   </select>
                 </div>
 
@@ -580,16 +639,16 @@
                     <label class="setting-label">줄 간격</label>
                     <div class="range-input-wrap">
                       <input type="range" class="setting-range" id="style-block-line-height" min="1.0" max="3.0"
-                        step="0.1" value="1.8">
-                      <span class="range-value" id="style-block-line-height-value">1.8</span>
+                        step="0.1" value="1.7">
+                      <span class="range-value" id="style-block-line-height-value">1.7</span>
                     </div>
                   </div>
                   <div class="setting-group">
                     <label class="setting-label">문단 간격</label>
                     <div class="range-input-wrap">
                       <input type="range" class="setting-range" id="style-paragraph-spacing" min="0" max="2" step="0.05"
-                        value="1.5">
-                      <span class="range-value" id="style-paragraph-spacing-value">1.5em</span>
+                        value="1">
+                      <span class="range-value" id="style-paragraph-spacing-value">1em</span>
                     </div>
                   </div>
                 </div>
@@ -626,8 +685,8 @@
                     <label class="setting-label">컨테이너 외부 여백 (위/아래)</label>
                     <div class="range-input-wrap">
                       <input type="range" class="setting-range" id="style-container-margin-y" min="0" max="6"
-                        step="0.25" value="1">
-                      <span class="range-value" id="style-container-margin-y-value">1em</span>
+                        step="0.25" value="1.5">
+                      <span class="range-value" id="style-container-margin-y-value">1.5em</span>
                     </div>
                   </div>
                 </div>
@@ -790,16 +849,16 @@
                     <label class="setting-label">로그 제목 크기</label>
                     <div class="range-input-wrap">
                       <input type="range" class="setting-range" id="style-log-title-size" min="1.2" max="3" step="0.1"
-                        value="1.8">
-                      <span class="range-value" id="style-log-title-size-value">1.8em</span>
+                        value="1.5">
+                      <span class="range-value" id="style-log-title-size-value">1.5em</span>
                     </div>
                   </div>
                   <div class="setting-group">
                     <label class="setting-label">뱃지 크기</label>
                     <div class="range-input-wrap">
                       <input type="range" class="setting-range" id="style-badge-scale" min="0.8" max="1.6" step="0.05"
-                        value="1">
-                      <span class="range-value" id="style-badge-scale-value">1.00x</span>
+                        value="0.9">
+                      <span class="range-value" id="style-badge-scale-value">0.90x</span>
                     </div>
                     <p class="setting-hint">모델/프롬프트/보조 뱃지에만 적용됩니다</p>
                   </div>
@@ -841,8 +900,8 @@
                   <label class="setting-label">헤더 테두리 두께</label>
                   <div class="range-input-wrap">
                     <input type="range" class="setting-range" id="style-header-border-width" min="0" max="12" step="1"
-                      value="0">
-                    <span class="range-value" id="style-header-border-width-value">0px</span>
+                      value="1">
+                    <span class="range-value" id="style-header-border-width-value">1px</span>
                   </div>
                 </div>
 

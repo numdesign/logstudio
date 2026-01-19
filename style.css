@@ -629,8 +629,11 @@ body.theme-dark .output-tab:hover {
 
 /* 이미지 스타일 */
 .log-block-textarea img {
-    max-width: 100%;
+    max-width: min(100%, 520px);
+    max-height: 240px;
+    width: auto;
     height: auto;
+    object-fit: contain;
     border-radius: 8px;
     margin: 0.5em 0;
     display: block;
@@ -2136,6 +2139,19 @@ body.theme-dark .style-accordion-header:hover {
     padding: 1.5rem;
 }
 
+.confirm-message {
+    margin: 0;
+    white-space: pre-wrap;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.confirm-highlight {
+    color: var(--accent);
+    font-weight: 800;
+}
+
 .find-replace-row {
     margin-bottom: 1rem;
 }
@@ -2265,7 +2281,8 @@ body.theme-dark .style-accordion-header:hover {
 }
 
 .find-replace-btn--primary:hover {
-    background: var(--accent-dark);
+    background: var(--accent-hover);
+    color: #fff;
 }
 
 /* ===== 모바일 반응형 추가 ===== */
