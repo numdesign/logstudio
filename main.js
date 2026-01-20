@@ -1534,6 +1534,12 @@ const settings = {
     // 말풍선 색상
     aiBubbleColor: "#f4f4f5",
     userBubbleColor: "#dbeafe",
+    // 폰트 프리셋
+    // - default: font-family를 아예 출력하지 않음 (브라우저/커뮤니티 기본 폰트 사용)
+    // - serif: 바탕체
+    // - sans: 고딕체(기존 기본값 유지)
+    fontPreset: "sans",
+    // (레거시/호환) 과거에는 직접 fontFamily 문자열을 저장했음
     fontFamily: "Pretendard, sans-serif",
     fontSize: 15,
     fontWeight: 400,
@@ -1597,6 +1603,10 @@ const settings = {
     // 나레이션/일반 문단 간격 (<p> margin-bottom)
     // - 기본값 0: 기존 출력과 동일
     paragraphSpacing: 1,
+    // 문단 들여쓰기 (토글)
+    // - ON: text-indent를 fontSize(px)로 적용
+    // - OFF: text-indent 속성 자체를 출력하지 않음
+    paragraphIndentEnabled: false,
     // 로그 블록(섹션) 단위 줄 간격
     blockLineHeight: 1.7,
     letterSpacing: 0,
@@ -2422,6 +2432,13 @@ function buildBubbleBackgroundCSS(isAi) {
     return base;
 }
 
+function getFontFamilyForPreset(preset) {
+    const p = String(preset ?? 'sans');
+    if (p === 'default') return null;
+    if (p === 'serif') return 'Times New Roman, Batang, serif';
+    return 'Pretendard, sans-serif';
+}
+
 function migrateSettingsFromLoadedObject(loaded, options = null) {
     const has = (k) => Object.prototype.hasOwnProperty.call(loaded || {}, k);
     const logArr = options?.log;
@@ -2434,6 +2451,23 @@ function migrateSettingsFromLoadedObject(loaded, options = null) {
     if (!has("disableContainerStyle")) settings.disableContainerStyle = Boolean(settings.disableContainerStyle);
     settings.disableHeader = Boolean(settings.disableHeader);
     settings.disableContainerStyle = Boolean(settings.disableContainerStyle);
+
+    // 폰트 프리셋
+    if (!has('fontPreset')) {
+        const legacyFont = String(loaded.fontFamily ?? settings.fontFamily ?? '').toLowerCase();
+        if (legacyFont.includes('times') || legacyFont.includes('batang') || legacyFont.includes('serif')) {
+            settings.fontPreset = 'serif';
+        } else if (legacyFont.includes('pretendard') || legacyFont.includes('sans')) {
+            settings.fontPreset = 'sans';
+        } else {
+            // 기존 기본값과 최대한 비슷하게
+            settings.fontPreset = 'sans';
+        }
+        log('fontFamily(legacy) → fontPreset');
+    }
+    if (!['default', 'serif', 'sans'].includes(String(settings.fontPreset))) {
+        settings.fontPreset = 'sans';
+    }
 
     // 배경 그라데이션 (방향 문자열 -> 각도/원형)
     if (!has("bgGradientAngle") && has("bgGradientDirection")) {
@@ -2596,6 +2630,17 @@ function migrateSettingsFromLoadedObject(loaded, options = null) {
     if (!has("paragraphSpacing")) settings.paragraphSpacing = settings.paragraphSpacing ?? 0;
     settings.paragraphSpacing = clampNumber(settings.paragraphSpacing ?? 0, 0, 5);
 
+    // 문단 들여쓰기 (토글)
+    // - 레거시: textIndentPx(0~80) → paragraphIndentEnabled(boolean)
+    if (has('textIndentPx')) {
+        const legacyIndent = Number(loaded.textIndentPx);
+        settings.paragraphIndentEnabled = Number.isFinite(legacyIndent) && legacyIndent > 0;
+        delete settings.textIndentPx;
+        log('textIndentPx(legacy) → paragraphIndentEnabled');
+    }
+    if (!has('paragraphIndentEnabled')) settings.paragraphIndentEnabled = Boolean(settings.paragraphIndentEnabled);
+    settings.paragraphIndentEnabled = Boolean(settings.paragraphIndentEnabled);
+
     // 헤더 배경 (기존: bgColor 기반 자동 그라데이션)
     if (!has("headerBgColor")) {
         settings.headerBgColor = adjustColor(settings.bgColor, 12);
@@ -2756,7 +2801,10 @@ function parseMarkdown(text) {
 // 문단 스타일 생성
 function getParagraphStyle() {
     const mb = clampNumber(settings.paragraphSpacing ?? 0, 0, 5);
-    return `margin: 0 0 ${mb}em 0; text-align: ${settings.textAlign}; word-break: keep-all;`;
+    const indentEnabled = Boolean(settings.paragraphIndentEnabled);
+    const indentPx = clampNumber(settings.fontSize ?? 15, 10, 40);
+    const indentStyle = indentEnabled ? ` text-indent: ${indentPx}px;` : '';
+    return `margin: 0 0 ${mb}em 0; text-align: ${settings.textAlign}; word-break: keep-all;${indentStyle}`;
 }
 
 // HTML 블록 콘텐츠 파싱 (이미지 + 텍스트 혼합 처리)
@@ -3361,7 +3409,7 @@ ${linesHTML}
         `margin: ${settings.containerOuterMarginY}em auto`,
         `padding: ${settings.containerPadding}em`,
         `color: ${settings.textColor}`,
-        `font-family: ${settings.fontFamily}`,
+        ...(getFontFamilyForPreset(settings.fontPreset) ? [`font-family: ${getFontFamilyForPreset(settings.fontPreset)}`] : []),
         `font-size: ${settings.fontSize}px`,
         `font-weight: ${settings.fontWeight}`,
         `line-height: ${settings.lineHeight}`,
@@ -3645,7 +3693,13 @@ function applyPreviewContainerStyle(previewEl, disableContainerStyle) {
     previewEl.style.margin = `${settings.containerOuterMarginY}em auto`;
     previewEl.style.padding = `${settings.containerPadding}em`;
     previewEl.style.color = settings.textColor;
-    previewEl.style.fontFamily = settings.fontFamily.split(',')[0].replace(/['"]/g, ''); // 간단한 미리보기용
+    const fontFamily = getFontFamilyForPreset(settings.fontPreset);
+    if (fontFamily) {
+        previewEl.style.fontFamily = fontFamily;
+    } else {
+        // 기본 폰트: 속성 자체를 제거(브라우저 기본값 사용)
+        previewEl.style.removeProperty('font-family');
+    }
     previewEl.style.fontSize = `${settings.fontSize}px`;
     previewEl.style.fontWeight = settings.fontWeight;
     previewEl.style.lineHeight = settings.lineHeight;
@@ -4195,6 +4249,28 @@ if (textAlignSelect) {
     });
 }
 
+// 폰트 프리셋 셀렉트
+const fontPresetSelect = document.getElementById('style-font-preset');
+if (fontPresetSelect) {
+    fontPresetSelect.addEventListener('change', (e) => {
+        settings.fontPreset = e.target.value;
+        updatePreview({ fast: true });
+        saveToStorage();
+    });
+}
+
+// 문단 들여쓰기 토글
+const paragraphIndentToggle = document.getElementById('style-text-indent');
+const paragraphIndentLabel = document.getElementById('style-text-indent-label');
+if (paragraphIndentToggle && paragraphIndentLabel) {
+    paragraphIndentToggle.addEventListener('change', (e) => {
+        settings.paragraphIndentEnabled = e.target.checked;
+        paragraphIndentLabel.textContent = e.target.checked ? '켜짐' : '꺼짐';
+        updatePreview({ fast: true });
+        saveToStorage();
+    });
+}
+
 // 테두리 스타일 셀렉트
 const borderStyleSelect = document.getElementById("style-border-style");
 if (borderStyleSelect) {
@@ -4615,11 +4691,15 @@ function syncAllUIFromSettings() {
 
     // 텍스트 정렬/테두리 스타일/헤더 정렬/뱃지 스타일 동기화
     syncSelectUI("style-text-align", "textAlign");
+    syncSelectUI("style-font-preset", "fontPreset");
     syncSelectUI("style-border-style", "borderStyle");
     syncSelectUI("style-header-align", "headerAlign");
     syncSelectUI("style-badge-style", "badgeStyle");
     syncSelectUI("style-image-shadow", "imageShadow");
     syncSelectUI("style-image-align", "imageAlign");
+
+    // 문단 들여쓰기 토글 동기화
+    syncToggleUI("style-text-indent", "style-text-indent-label", settings.paragraphIndentEnabled);
 
     // 이미지 테두리 동기화
     const imageBorderWidthEl = document.getElementById("style-image-border-width");
