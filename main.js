@@ -483,12 +483,81 @@ function formatContentForEditable(content) {
 }
 
 // Paste 이벤트 핸들러
+function insertPlainTextAtCursor(text) {
+    if (!text) return;
+    const normalized = String(text).replace(/\r\n?/g, "\n");
+
+    // execCommand('insertText')는 브라우저마다 동작이 달라 HTML로 안전 삽입
+    // - plain text를 HTML로 escape 후 <br>로 줄바꿈 유지
+    const escaped = escapeHTML(normalized).replace(/\n/g, "<br>");
+    document.execCommand('insertHTML', false, escaped);
+}
+
+function isLikelyImageMarkerLine(line) {
+    const t = String(line ?? '').trim().toLowerCase();
+    if (!t) return true;
+    return (
+        t.startsWith('<img') ||
+        t.startsWith('<pimg') ||
+        t.startsWith('[img') ||
+        t.startsWith('[pimg') ||
+        t.startsWith('{{img') ||
+        t.startsWith('{{pimg')
+    );
+}
+
+function getPlainTextAnchors(plainText) {
+    const lines = String(plainText ?? '').replace(/\r\n?/g, '\n').split('\n');
+
+    let start = null;
+    for (const line of lines) {
+        if (isLikelyImageMarkerLine(line)) continue;
+        start = line.trim();
+        if (start) break;
+    }
+
+    let end = null;
+    for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i];
+        if (isLikelyImageMarkerLine(line)) continue;
+        end = line.trim();
+        if (end) break;
+    }
+
+    if (!start || !end) return null;
+    return { start, end };
+}
+
+function trimOutsideAnchors(content, anchors) {
+    if (!anchors?.start || !anchors?.end) return content;
+
+    const startIndex = content.indexOf(anchors.start);
+    const endIndex = content.lastIndexOf(anchors.end);
+
+    if (startIndex === -1 || endIndex === -1) return content;
+    if (endIndex < startIndex) return content;
+
+    return content.slice(startIndex, endIndex + anchors.end.length);
+}
+
+function normalizeExcessNewlines(content) {
+    // 과한 개행을 하나로 (\n\n, <br> 변환 후 생기는 중복 포함)
+    return String(content ?? '')
+        .replace(/[ \t]*\n[ \t]*/g, '\n')
+        .replace(/\n{2,}/g, '\n')
+        .trim();
+}
+
 async function handlePasteWithImages(e, blockId) {
     const clipboardData = e.clipboardData || window.clipboardData;
     if (!clipboardData) return false;
 
     const items = clipboardData.items;
     const types = clipboardData.types;
+
+    // Ctrl+Shift+V (또는 Shift 포함 붙여넣기): 서식 없이 text/plain 우선
+    // - 이미지 파일 붙여넣기는 아래에서 항상 우선 처리됨
+    const forcePlainText = !!e.shiftKey;
 
     // 이미지 파일 직접 붙여넣기 (우선 처리)
     // - 스크린샷, 파일 복사 등
@@ -507,15 +576,27 @@ async function handlePasteWithImages(e, blockId) {
     }
 
     // HTML이 있으면 처리 (이미지 포함 가능)
-    if (types.includes('text/html')) {
+    if (!forcePlainText && types.includes('text/html')) {
         e.preventDefault();
         const html = clipboardData.getData('text/html');
 
+        // text/plain의 첫/마지막 줄을 앵커로 사용해 HTML 바깥 요소 제거
+        const plainText = types.includes('text/plain') ? clipboardData.getData('text/plain') : '';
+
         // HTML 파싱하여 이미지 추출 및 압축
-        const processedHtml = await processHtmlWithImages(html);
+        const processedHtml = await processHtmlWithImages(html, plainText);
 
         // 현재 선택 위치에 삽입
         document.execCommand('insertHTML', false, processedHtml);
+        return true;
+    }
+
+    // 서식 없는 붙여넣기 (text/plain)
+    // - contenteditable 기본 paste는 text/html을 우선으로 쓰는 경우가 있어 강제 처리
+    if (forcePlainText && types.includes('text/plain')) {
+        e.preventDefault();
+        const text = clipboardData.getData('text/plain');
+        insertPlainTextAtCursor(text);
         return true;
     }
 
@@ -524,7 +605,7 @@ async function handlePasteWithImages(e, blockId) {
 }
 
 // HTML 내 이미지 처리 (외부 URL -> base64, 압축)
-async function processHtmlWithImages(html) {
+async function processHtmlWithImages(html, plainText = '') {
     mobileLog('[붙여넣기] HTML 길이:', html.length);
 
     const parser = new DOMParser();
@@ -607,6 +688,12 @@ async function processHtmlWithImages(html) {
     // 앞/뒤 공백 정리 (중간의 연속 줄바꿈은 보존)
     cleanHtml = cleanHtml.trim();
 
+    // plain 텍스트 앵커 기반으로 바깥쪽(헤더/푸터/프로필 등) 제거
+    const anchors = getPlainTextAnchors(plainText);
+    if (anchors) {
+        cleanHtml = trimOutsideAnchors(cleanHtml, anchors).trim();
+    }
+
     // 이미지 처리 및 placeholder 교체
     for (let i = 0; i < imagesToProcess.length; i++) {
         let imgSrc = imagesToProcess[i];
@@ -684,7 +771,8 @@ async function processHtmlWithImages(html) {
         }
     }
 
-    return cleanHtml.trim();
+    // 과한 개행을 하나로 줄임
+    return normalizeExcessNewlines(cleanHtml);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
